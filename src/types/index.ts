@@ -22,7 +22,7 @@ export interface AnnouncementSchedule {
 export interface Job {
   id: string;
   title: string;
-  category: '연구직' | '행정직' | '위촉연구원'; 
+  category: '연구직' | '행정직'; 
   type: '정규직' | '계약직' | '무기계약직';
   deadLine: string;
   count: number;
