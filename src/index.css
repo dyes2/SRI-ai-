@@ -1,0 +1,36 @@
+@import "tailwindcss";
+
+@theme {
+  --color-primary: #1e3a8a;
+  --color-secondary: #1d4ed8;
+  --color-accent: #f1f5f9;
+  --font-sans: "Inter", "Pretendard", ui-sans-serif, system-ui, sans-serif;
+  --radius-card: 1rem;
+  --radius-inner: 0.75rem;
+}
+
+@layer base {
+  body {
+    @apply bg-slate-50 text-slate-900 antialiased;
+  }
+}
+
+.bento-card {
+  @apply bg-white border border-slate-200 rounded-card shadow-sm overflow-hidden transition-all;
+}
+
+.bento-card-header {
+  @apply p-5 border-b border-slate-100 flex justify-between items-center;
+}
+
+.step-indicator-active {
+  @apply bg-primary text-white border-primary;
+}
+
+.step-indicator-pending {
+  @apply bg-white text-slate-400 border-slate-200;
+}
+
+.step-indicator-complete {
+  @apply bg-green-500 text-white border-green-500;
+}
