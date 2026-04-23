@@ -1194,7 +1194,7 @@ export default function Admin() {
             </div>
           </div>
         ) : activeTab === 'applicants' ? (
-          <>
+          <div className="col-span-12 bg-white rounded-3xl border border-slate-100 shadow-sm overflow-hidden animate-in fade-in slide-in-from-bottom-4 duration-500">
             <div className="p-6 border-b border-slate-100 flex flex-col md:flex-row md:items-center justify-between gap-4">
               <div className="flex flex-col gap-1">
                 <div className="flex items-center gap-4">
@@ -1281,10 +1281,10 @@ export default function Admin() {
             </div>
 
             <div className="overflow-x-auto">
-              <table className="w-full text-left border-collapse">
+              <table className="w-full text-left border-collapse table-auto">
                 <thead>
-                  <tr className="bg-slate-50/50">
-                    <th className="px-6 py-4 w-12 text-center">
+                  <tr className="bg-slate-50/50 border-b border-slate-100">
+                    <th className="px-6 py-5 w-12 text-center">
                       <input 
                         type="checkbox" 
                         checked={selectedIds.length === filteredApplicants.length && filteredApplicants.length > 0}
@@ -1292,18 +1292,18 @@ export default function Admin() {
                         className="w-4 h-4 rounded border-slate-300 text-primary focus:ring-primary cursor-pointer"
                       />
                     </th>
-                    <th className="px-6 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest">지원자(마스킹)</th>
-                    <th className="px-6 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest">지원공고</th>
-                    <th className="px-6 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest">지원일</th>
-                    <th className="px-6 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest">전형상태</th>
-                    <th className="px-6 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest">접수번호</th>
-                    <th className="px-6 py-4"></th>
+                    <th className="px-6 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest min-w-[200px]">지원자 정보</th>
+                    <th className="px-6 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest min-w-[200px]">지원 공고</th>
+                    <th className="px-6 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">지원일</th>
+                    <th className="px-6 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">전형 상태</th>
+                    <th className="px-6 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">접수 번호</th>
+                    <th className="px-6 py-5 w-24"></th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
-                  {filteredApplicants.map((applicant, idx) => (
-                    <tr key={applicant.id} className="hover:bg-slate-50 transition-colors group">
-                      <td className="px-6 py-4 text-center">
+                  {filteredApplicants.map((applicant) => (
+                    <tr key={applicant.id} className="hover:bg-slate-50/50 transition-colors group">
+                      <td className="px-6 py-5 text-center">
                         <input 
                           type="checkbox" 
                           checked={selectedIds.includes(applicant.id)}
@@ -1311,22 +1311,26 @@ export default function Admin() {
                           className="w-4 h-4 rounded border-slate-300 text-primary focus:ring-primary cursor-pointer"
                         />
                       </td>
-                      <td className="px-6 py-4">
+                      <td className="px-6 py-5">
                         <div className="flex items-center gap-3">
-                          <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center font-bold text-xs text-slate-400">
+                          <div className="w-9 h-9 rounded-full bg-slate-100 flex items-center justify-center font-bold text-xs text-slate-400 border border-slate-200 shadow-sm">
                             {applicant.name[0]}
                           </div>
-                          <div className="text-sm">
-                            <p className="font-bold text-slate-700">{applicant.name}</p>
-                            <p className="text-[10px] text-slate-400">{applicant.email}</p>
+                          <div className="flex flex-col">
+                            <span className="text-sm font-bold text-slate-700">{applicant.name}</span>
+                            <span className="text-[10px] text-slate-400 font-medium">{applicant.email}</span>
                           </div>
                         </div>
                       </td>
-                      <td className="px-6 py-4 text-sm font-medium text-slate-600">{applicant.job}</td>
-                      <td className="px-6 py-4 text-sm text-slate-400 font-mono">{applicant.date}</td>
-                      <td className="px-6 py-4">
+                      <td className="px-6 py-5">
+                        <span className="text-sm font-medium text-slate-600">{applicant.job}</span>
+                      </td>
+                      <td className="px-6 py-5 text-center">
+                        <span className="text-sm text-slate-400 font-mono tracking-tight">{applicant.date}</span>
+                      </td>
+                      <td className="px-6 py-5 text-center">
                         <span className={cn(
-                          "px-2 py-1 rounded-full text-[10px] font-bold tracking-tight border",
+                          "px-2.5 py-1 rounded-lg text-[10px] font-black tracking-tight border",
                           applicant.status === '심사중' ? 'bg-blue-50 text-blue-600 border-blue-100' : 
                           applicant.status.includes('합격') ? 'bg-green-50 text-green-600 border-green-100' :
                           applicant.status.includes('불합격') ? 'bg-red-50 text-red-600 border-red-100' :
@@ -1335,33 +1339,35 @@ export default function Admin() {
                           {applicant.status}
                         </span>
                       </td>
-                      <td className="px-6 py-4 text-xs font-mono text-slate-400">{applicant.id}</td>
-                        <td className="px-6 py-4 text-right">
-                          <div className="flex justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                            <button 
-                              onClick={() => exportToPDF(applicant)}
-                              className="p-1.5 text-slate-400 hover:text-primary transition-colors bg-white border border-slate-100 rounded-lg shadow-sm flex items-center gap-1"
-                              title="PDF 다운로드"
-                            >
-                              {isExporting && exportTarget?.id === applicant.id ? (
-                                <Loader2 className="w-4 h-4 animate-spin text-primary" />
-                              ) : (
-                                <FileDown className="w-4 h-4" />
-                              )}
-                            </button>
-                            <button className="p-1.5 text-slate-400 hover:text-primary transition-colors bg-white border border-slate-100 rounded-lg shadow-sm">
-                              <MoreHorizontal className="w-4 h-4" />
-                            </button>
-                          </div>
-                        </td>
+                      <td className="px-6 py-5 text-center">
+                        <span className="text-[11px] font-bold text-slate-400 font-mono italic">{applicant.id}</span>
+                      </td>
+                      <td className="px-6 py-5 text-right">
+                        <div className="flex justify-end gap-2 opacity-0 group-hover:opacity-100 transition-all duration-200">
+                          <button 
+                            onClick={() => exportToPDF(applicant)}
+                            className="p-1.5 text-slate-400 hover:text-primary transition-colors bg-white border border-slate-200 rounded-lg shadow-sm flex items-center gap-1"
+                            title="PDF 다운로드"
+                          >
+                            {isExporting && exportTarget?.id === applicant.id ? (
+                              <Loader2 className="w-3.5 h-3.5 animate-spin text-primary" />
+                            ) : (
+                              <FileDown className="w-3.5 h-3.5" />
+                            )}
+                          </button>
+                          <button className="p-1.5 text-slate-400 hover:text-primary transition-colors bg-white border border-slate-200 rounded-lg shadow-sm">
+                            <MoreHorizontal className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      </td>
                     </tr>
                   ))}
                 </tbody>
               </table>
             </div>
-          </>
+          </div>
         ) : (
-          <>
+          <div className="col-span-12 bg-white rounded-3xl border border-slate-100 shadow-sm overflow-hidden animate-in fade-in slide-in-from-bottom-4 duration-500">
             {/* Inquiry Filter Section */}
             <div className="p-6 border-b border-slate-100 space-y-4">
               <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -1473,12 +1479,12 @@ export default function Admin() {
                 </tbody>
               </table>
             </div>
-          </>
+          </div>
         )}
-      
+
         {/* Footer Pagination */}
         {!viewingInquiry && (
-          <div className="p-6 border-t border-slate-100 bg-slate-50/30 flex items-center justify-between">
+          <div className="col-span-12 p-6 border-t border-slate-100 bg-white rounded-3xl border border-slate-100 shadow-sm flex items-center justify-between">
             <p className="text-xs text-slate-400 font-medium">
               {activeTab === 'applicants' ? `Showing ${filteredApplicants.length} of 1,240 results` : `Showing ${filteredInquiries.length} results`}
             </p>

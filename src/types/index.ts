@@ -142,6 +142,22 @@ export interface EvaluationStage {
   minPassScore?: number; // 과락 기준 점수 (평균)
 }
 
+export interface MypageApplicant {
+  id: string;
+  name: string;
+  phone: string;
+  password: string;
+}
+
+export interface MypageApplication {
+  id: string;
+  applicantId: string;
+  postingTitle: string;
+  status: ApplicationStatus;
+  createdAt: string;
+  receiptNumber: string;
+}
+
 export type EvaluationStatus = 'PENDING' | 'SUBMITTED' | 'SIGNED';
 
 export interface ApplicantScore {
