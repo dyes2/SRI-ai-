@@ -1,122 +1,41 @@
-import { useState, useEffect } from 'react';
+import { useState, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { Search, ChevronRight, Clock, Users, Building } from 'lucide-react';
 import { motion } from 'motion/react';
-import { Job } from '../types';
 import { formatDate, cn } from '../lib/utils';
-
-const MOCK_JOBS: Job[] = [
-  {
-    id: '1',
-    title: '2024년 하반기 연구직(수습) 정기 채용',
-    category: '연구직',
-    type: '정규직',
-    deadLine: '2024-05-30',
-    count: 2,
-    status: 'ONGOING',
-    description: '스마트 도시 및 경제 개발 분야 정책 지원 연구',
-    fields: [],
-    selectedStages: ['DOCUMENT', 'INTERVIEW_1', 'INTERVIEW_2'],
-    qualifications: { common: '', additional: '' },
-    requiredDocuments: [],
-    schedule: { 
-      postingPeriod: { start: '2024-05-01', end: '2024-05-30' },
-      applicationPeriod: { start: '2024-05-10', end: '2024-05-30' },
-      documentResults: '2024-06-05',
-      interview1: '2024-06-15',
-      finalResults: '2024-06-30'
-    },
-    salaryInfo: '당사 규정에 따름',
-    contractPeriod: '',
-    notice: '',
-    attachments: []
-  },
-  {
-    id: '2',
-    title: '정규직 행정직원 채용 공고',
-    category: '행정직',
-    type: '정규직',
-    deadLine: '2024-05-15',
-    count: 1,
-    status: 'ONGOING',
-    description: '연구행정 지원 및 일반 행찰 수합',
-    fields: [],
-    selectedStages: ['DOCUMENT', 'INTERVIEW_1'],
-    qualifications: { common: '', additional: '' },
-    requiredDocuments: [],
-    schedule: { 
-      postingPeriod: { start: '2024-04-15', end: '2024-05-15' },
-      applicationPeriod: { start: '2024-05-01', end: '2024-05-15' },
-      documentResults: '2024-05-20',
-      interview1: '2024-05-25',
-      finalResults: '2024-05-30'
-    },
-    salaryInfo: '당사 규정에 따름',
-    contractPeriod: '',
-    notice: '',
-    attachments: []
-  },
-  {
-    id: '3',
-    title: '기간제 연구보조원 모집',
-    category: '연구직',
-    type: '계약직',
-    deadLine: '2024-06-10',
-    count: 3,
-    status: 'UPCOMING',
-    description: '데이터 전처리 및 통계 분석 보조',
-    fields: [],
-    selectedStages: ['DOCUMENT', 'INTERVIEW_1'],
-    qualifications: { common: '', additional: '' },
-    requiredDocuments: [],
-    schedule: { 
-      postingPeriod: { start: '2024-06-01', end: '2024-06-10' },
-      applicationPeriod: { start: '2024-06-05', end: '2024-06-10' },
-      documentResults: '2024-06-15',
-      interview1: '2024-06-20',
-      finalResults: '2024-06-25'
-    },
-    salaryInfo: '당사 규정에 따름',
-    contractPeriod: '',
-    notice: '',
-    attachments: []
-  },
-  {
-    id: '4',
-    title: '2024년 상반기 일반직 채용',
-    category: '연구직',
-    type: '정규직',
-    deadLine: '2024-04-01',
-    count: 1,
-    status: 'CLOSED',
-    description: '사회 복지 시스템 개선 연구 담당',
-    fields: [],
-    selectedStages: ['DOCUMENT', 'INTERVIEW_1'],
-    qualifications: { common: '', additional: '' },
-    requiredDocuments: [],
-    schedule: { 
-      postingPeriod: { start: '2024-03-01', end: '2024-04-01' },
-      applicationPeriod: { start: '2024-03-15', end: '2024-04-01' },
-      documentResults: '2024-04-05',
-      interview1: '2024-04-10',
-      finalResults: '2024-04-15'
-    },
-    salaryInfo: '당사 규정에 따름',
-    contractPeriod: '',
-    notice: '',
-    attachments: []
-  }
-];
+import { useJob } from '../context/JobContext';
 
 export default function Home() {
+  const { jobs } = useJob();
   const [filter, setFilter] = useState('ALL');
   const [searchTerm, setSearchTerm] = useState('');
 
-  const filteredJobs = MOCK_JOBS.filter(job => {
-    const matchesFilter = filter === 'ALL' || job.status === filter;
-    const matchesSearch = job.title.toLowerCase().includes(searchTerm.toLowerCase());
-    return matchesFilter && matchesSearch;
-  });
+  // Use useMemo for performance and to handle filtering
+  const filteredJobs = useMemo(() => {
+    console.log('Main Page Jobs Raw:', jobs);
+    
+    return jobs.filter(job => {
+      // 1. Search filter
+      const matchesSearch = job.title.toLowerCase().includes(searchTerm.toLowerCase());
+      
+      // 2. Status filter
+      const matchesFilter = filter === 'ALL' || job.status === filter;
+      
+      // 3. User Requirement: Only show posts within current date period
+      const now = new Date();
+      now.setHours(0, 0, 0, 0); // Normalize time
+      
+      const start = job.schedule?.postingPeriod.start ? new Date(job.schedule.postingPeriod.start) : null;
+      const end = job.schedule?.postingPeriod.end ? new Date(job.schedule.postingPeriod.end) : null;
+      
+      if (start) start.setHours(0, 0, 0, 0);
+      if (end) end.setHours(23, 59, 59, 999);
+
+      const isDateVisible = !start || !end || (now >= start && now <= end);
+      
+      return matchesSearch && matchesFilter && isDateVisible;
+    });
+  }, [jobs, filter, searchTerm]);
 
   return (
     <div className="grid grid-cols-12 gap-6 items-start">

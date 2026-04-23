@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { jsPDF } from 'jspdf';
 import html2canvas from 'html2canvas';
@@ -36,6 +36,7 @@ import { ApplicationStatus, Inquiry, EvaluationStage, ApplicantScore, Judge, Sta
 import { ApplicationPDF } from '../components/admin/ApplicationPDF';
 import { SummaryPDF } from '../components/admin/SummaryPDF';
 
+// Remove redundant INITIAL_ constants as they are now in JobContext
 const STATUS_LIST: ApplicationStatus[] = [
   '미제출', 
   '접수완료', 
@@ -48,161 +49,12 @@ const STATUS_LIST: ApplicationStatus[] = [
   '3차전형 불합격'
 ];
 
-const INITIAL_APPLICANTS = [
-  { id: '20240420-01', name: '김*원', email: 'kim***@example.com', jobId: 'JOB-2024-001', job: '연구직(수습)', status: '심사중' as ApplicationStatus, date: '2024-04-20' },
-  { id: '20240420-02', name: '이*정', email: 'lee***@example.com', jobId: 'JOB-2024-001', job: '연구직(수습)', status: '접수완료' as ApplicationStatus, date: '2024-04-19' },
-  { id: '20240420-03', name: '박*민', email: 'park***@example.com', jobId: 'JOB-2024-002', job: '행정직원', status: '심사중' as ApplicationStatus, date: '2024-04-18' },
-  { id: '20240420-04', name: '최*영', email: 'choi***@example.com', jobId: 'JOB-2024-002', job: '행정직원', status: '접수완료' as ApplicationStatus, date: '2024-04-18' },
-];
-
-const INITIAL_INQUIRIES: Inquiry[] = [
-  {
-    id: '1',
-    category: '채용일정',
-    title: '문의드립니다',
-    author: '홍길동',
-    publicName: true,
-    content: '올해 하반기 채용 일정이 정확히 언제인가요?',
-    createdAt: '2026-04-21',
-    answer: '안녕하세요. 하반기 채용은 9월 중 공고될 예정입니다.',
-    answeredAt: '2026-04-21'
-  },
-  {
-    id: '2',
-    category: '지원서 작성',
-    title: '지원 관련 질문',
-    author: '김지원',
-    publicName: false,
-    password: '1234',
-    content: '연구 실적 증빙 서류에 학위 논문도 포함되나요?',
-    createdAt: '2026-04-21'
-  }
-];
-
 const TEMPLATES = [
   "채용 일정은 공고문을 참고해주세요.",
   "서류 접수는 마감일 18시까지 가능합니다.",
   "증빙 서류는 PDF 파일로 제출해주시기 바랍니다.",
   "공정한 심사를 위해 노력하겠습니다."
 ];
-
-const INITIAL_JOBS: Job[] = [
-  { 
-    id: 'JOB-2024-001', 
-    title: '2024년 하반기 연구직(수습) 공개채용', 
-    category: '연구직', 
-    type: '정규직',
-    deadLine: '2024-04-20', 
-    count: 5,
-    status: 'CLOSED',
-    description: '수원시정연구원의 미래를 이끌어갈 역량 있는 연구자를 모집합니다.',
-    fields: [
-      { id: 'f1', name: '도시정책', major: '도시건축, 도시계획', slots: 2, content: '도시 정책 수립 및 실증 연구' },
-      { id: 'f2', name: '경제사회', major: '경제학, 사회학', slots: 3, content: '지역 경제 분석 및 사회 지표 연구' }
-    ],
-    selectedStages: ['DOCUMENT', 'INTERVIEW_1', 'INTERVIEW_PT'],
-    qualifications: {
-      common: '지방공무원법 제31조의 결격사유가 없는 자',
-      additional: '관련 분야 박사학위 소지자'
-    },
-    requiredDocuments: ['응시원서', '자기소개서', '연구실적', '직무수행계획서'],
-    schedule: {
-      postingPeriod: { start: '2024-04-01', end: '2024-04-20' },
-      applicationPeriod: { start: '2024-04-10', end: '2024-04-20' },
-      documentResults: '2024-04-25',
-      interview1: '2024-05-02',
-      interview2: '2024-05-10',
-      finalResults: '2024-05-15'
-    },
-    salaryInfo: '원내 보수 규정에 따름',
-    contractPeriod: '정규직 (임용일로부터)',
-    notice: '제출된 서류는 반환하지 않으며, 허위 사실이 발견될 경우 합격이 취소될 수 있습니다.',
-    attachments: []
-  },
-  { 
-    id: 'JOB-2024-002', 
-    title: '행정직원 및 공무직 상시채용', 
-    category: '행정직', 
-    type: '계약직',
-    deadLine: '2024-04-30', 
-    count: 2,
-    status: 'ONGOING',
-    description: '행정 및 운영 지원 업무를 담당할 열정적인 인재를 모집합니다.',
-    fields: [
-      { id: 'f3', name: '인사/총무', major: '무관', slots: 2, content: '인사 관리 및 일반 총무 행정' }
-    ],
-    selectedStages: ['DOCUMENT', 'INTERVIEW_1'],
-    qualifications: {
-      common: '지방공무원법 제31조의 결격사유가 없는 자',
-      additional: '학사 학위 이상 소지자'
-    },
-    requiredDocuments: ['응시원서', '자기소개서', '경력증명서'],
-    schedule: {
-      postingPeriod: { start: '2024-04-15', end: '2024-04-30' },
-      applicationPeriod: { start: '2024-04-20', end: '2024-04-30' },
-      documentResults: '2024-05-05',
-      interview1: '2024-05-12',
-      finalResults: '2024-05-20'
-    },
-    salaryInfo: '경력에 따라 협의',
-    contractPeriod: '1년 (성과에 따라 연장 가능)',
-    notice: '공정한 채용을 위해 블라인드 채용 방식을 준수합니다.',
-    attachments: []
-  },
-];
-
-const INITIAL_STAGES: Record<string, EvaluationStage[]> = {
-  'JOB-2024-001': [
-    {
-      type: 'DOCUMENT',
-      title: '1차 서류심사',
-      multiplier: 3,
-      openings: 5,
-      minPassScore: 60,
-      judges: [
-        { id: 'J1', name: '홍길동', affiliation: '수원시정연구원', position: '연구위원', role: '심사위원' },
-        { id: 'J2', name: '김철수', affiliation: '○○대학교', position: '교수', role: '심사위원' }
-      ],
-      criteria: [
-        { id: 'c1', label: '연구실적', maxScore: 40 },
-        { id: 'c2', label: '정책연구수행역량', maxScore: 30 },
-        { id: 'c3', label: '직무수행태도', maxScore: 30 },
-      ]
-    },
-    {
-      type: 'INTERVIEW_1',
-      title: '2차 면접/세미나',
-      multiplier: 2,
-      openings: 5,
-      minPassScore: 70,
-      judges: [
-        { id: 'J3', name: '이민수', affiliation: '수원시', position: '경제사회연구실장', role: '심사위원' }
-      ],
-      criteria: [
-        { id: 'c4', label: '논리성 및 명료성', maxScore: 25 },
-        { id: 'c5', label: '정책대안 제시능력', maxScore: 25 },
-        { id: 'c6', label: '의사소통능력', maxScore: 25 },
-        { id: 'c7', label: '문제해결능력', maxScore: 25 },
-      ]
-    }
-  ],
-  'JOB-2024-002': [
-    {
-      type: 'DOCUMENT',
-      title: '1차 서류심사',
-      multiplier: 5,
-      openings: 2,
-      minPassScore: 50,
-      judges: [
-        { id: 'J5', name: '박행정', affiliation: '수원시정연구원', position: '행정팀장', role: '심사위원' }
-      ],
-      criteria: [
-        { id: 'g1', label: '자기소개서', maxScore: 50 },
-        { id: 'g2', label: '경력적합성', maxScore: 50 },
-      ]
-    }
-  ]
-};
 
 const MASTER_JUDGES: Judge[] = [
     { id: 'J1', name: '홍길동', affiliation: '수원시정연구원', position: '연구위원' },
@@ -213,55 +65,37 @@ const MASTER_JUDGES: Judge[] = [
     { id: 'J7', name: '추가심사', affiliation: '경기정책포럼', position: '대표' },
 ];
 
+import { useJob } from '../context/JobContext';
+
 export default function Admin() {
-  const [activeTab, setActiveTab] = useState<'applicants' | 'inquiries' | 'evaluation' | 'announcements'>('applicants');
+  const { 
+    jobs: announcements,
+    addJob, 
+    updateJob, 
+    deleteJob,
+    inquiries, 
+    setInquiries,
+    applicants: applicantsList, 
+    setApplicants: setApplicantsList, 
+    applicantScores, 
+    setApplicantScores,
+    evaluationStages,
+    setEvaluationStages
+  } = useJob();
   
-  // Persistence Layer (Mock Sync)
-  const [announcements, setAnnouncements] = useState<Job[]>(() => {
-    const saved = localStorage.getItem('ATS_ANNOUNCEMENTS');
-    return saved ? JSON.parse(saved) : INITIAL_JOBS;
-  });
-
-  const [applicants, setApplicants] = useState(() => {
-    const saved = localStorage.getItem('ATS_APPLICANTS');
-    return saved ? JSON.parse(saved) : INITIAL_APPLICANTS;
-  });
+  const [activeTab, setActiveTab] = useState<'announcements' | 'applicants' | 'inquiries' | 'evaluation' | 'settings'>('announcements');
+  const [isJobFormOpen, setIsJobFormOpen] = useState(false);
+  const [editingJob, setEditingJob] = useState<Job | null>(null);
+  const [jobFormStep, setJobFormStep] = useState(1);
+  const [activeEvalJob, setActiveEvalJob] = useState<string>(announcements[0]?.id || '');
+  const [activeEvalStageType, setActiveEvalStageType] = useState<StageType>('DOCUMENT');
   
-  const [applicantScores, setApplicantScores] = useState<ApplicantScore[]>(() => {
-    const saved = localStorage.getItem('ATS_SCORES');
-    return saved ? JSON.parse(saved) : [];
-  });
-
-  const [evaluationStages, setEvaluationStages] = useState(() => {
-    const saved = localStorage.getItem('ATS_STAGES');
-    return saved ? JSON.parse(saved) : INITIAL_STAGES;
-  });
-
-  // Sync to LocalStorage on change
-  React.useEffect(() => {
-    localStorage.setItem('ATS_ANNOUNCEMENTS', JSON.stringify(announcements));
-  }, [announcements]);
-  React.useEffect(() => {
-    localStorage.setItem('ATS_APPLICANTS', JSON.stringify(applicants));
-  }, [applicants]);
-  React.useEffect(() => {
-    localStorage.setItem('ATS_SCORES', JSON.stringify(applicantScores));
-  }, [applicantScores]);
-  React.useEffect(() => {
-    localStorage.setItem('ATS_STAGES', JSON.stringify(evaluationStages));
-  }, [evaluationStages]);
-
-  const [inquiries, setInquiries] = useState(INITIAL_INQUIRIES);
-  const [selectedIds, setSelectedIds] = useState<string[]>([]);
-  const [filterJob, setFilterJob] = useState('ALL');
-  const [isStatusMenuOpen, setIsStatusMenuOpen] = useState(false);
-
-  // Inquiry Specific States
-  const [inquirySearch, setInquirySearch] = useState('');
-  const [inquiryStatusFilter, setInquiryStatusFilter] = useState<'ALL' | 'PENDING' | 'DONE'>('ALL');
-  const [inquiryVisibilityFilter, setInquiryVisibilityFilter] = useState<'ALL' | 'PUBLIC' | 'PRIVATE'>('ALL');
-  const [viewingInquiry, setViewingInquiry] = useState<Inquiry | null>(null);
-  const [replyText, setReplyText] = useState('');
+  // Update activeEvalJob if announcements change and it was empty
+  useEffect(() => {
+    if (!activeEvalJob && announcements.length > 0) {
+      setActiveEvalJob(announcements[0].id);
+    }
+  }, [announcements, activeEvalJob]);
 
   // PDF Export States
   const [isExporting, setIsExporting] = useState(false);
@@ -278,8 +112,6 @@ export default function Admin() {
   const summaryRef = useRef<HTMLDivElement>(null);
 
   // Evaluation Specific States
-  const [activeEvalJob, setActiveEvalJob] = useState('JOB-2024-001');
-  const [activeEvalStageType, setActiveEvalStageType] = useState<StageType>('DOCUMENT');
   const [evaluatingApplicantId, setEvaluatingApplicantId] = useState<string | null>(null);
 
   // Evaluation Form Tracking
@@ -298,10 +130,7 @@ export default function Admin() {
   });
 
   // Job Announcement Management States
-  const [isJobFormOpen, setIsJobFormOpen] = useState(false);
-  const [editingJob, setEditingJob] = useState<Job | null>(null);
   const [jobForm, setJobForm] = useState<Partial<Job>>({});
-  const [jobFormStep, setJobFormStep] = useState(1);
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
   const [isSignPopupOpen, setIsSignPopupOpen] = useState(false);
   const [isSignAgreed, setIsSignAgreed] = useState(false);
@@ -314,7 +143,16 @@ export default function Admin() {
   const [judgeFormData, setJudgeFormData] = useState({ name: '', affiliation: '', position: '' });
   const [judgeFormError, setJudgeFormError] = useState('');
 
-  const jobs = announcements.map(j => j.title);
+  const [inquirySearch, setInquirySearch] = useState('');
+  const [inquiryStatusFilter, setInquiryStatusFilter] = useState<'ALL' | 'PENDING' | 'ANSWERED'>('ALL');
+  const [inquiryVisibilityFilter, setInquiryVisibilityFilter] = useState<'ALL' | 'PUBLIC' | 'PRIVATE'>('ALL');
+  const [filterJob, setFilterJob] = useState<'ALL' | string>('ALL');
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [isStatusMenuOpen, setIsStatusMenuOpen] = useState(false);
+  const [viewingInquiry, setViewingInquiry] = useState<Inquiry | null>(null);
+  const [replyText, setReplyText] = useState('');
+
+  const jobsList = announcements.map(j => j.title);
 
   // Admin Auth States
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -392,10 +230,10 @@ export default function Admin() {
   }
 
   const filteredApplicants = activeTab === 'evaluation'
-    ? applicants.filter(a => a.jobId === activeEvalJob)
+    ? applicantsList.filter(a => a.jobId === activeEvalJob)
     : filterJob === 'ALL' 
-      ? applicants 
-      : applicants.filter(a => a.job === filterJob);
+      ? applicantsList 
+      : applicantsList.filter(a => a.job === filterJob);
 
   const filteredInquiries = inquiries.filter(i => {
     const searchLow = inquirySearch.toLowerCase();
@@ -421,8 +259,12 @@ export default function Admin() {
     );
   };
 
+  const formatDateISO = (date: Date) => {
+    return date.toISOString().split('T')[0];
+  };
+
   const handleStatusChange = (newStatus: ApplicationStatus) => {
-    setApplicants(prev => prev.map(a => 
+    setApplicantsList(prev => prev.map(a => 
       selectedIds.includes(a.id) ? { ...a, status: newStatus } : a
     ));
     setSelectedIds([]);
@@ -606,22 +448,36 @@ export default function Admin() {
         return;
     }
     
+    // Determine status automatically based on dates
+    const now = new Date();
+    now.setHours(0,0,0,0);
+    const startDate = jobForm.schedule?.postingPeriod.start ? new Date(jobForm.schedule.postingPeriod.start) : new Date();
+    const endDate = jobForm.schedule?.postingPeriod.end ? new Date(jobForm.schedule.postingPeriod.end) : new Date();
+    
+    let calculatedStatus: 'ONGOING' | 'UPCOMING' | 'CLOSED' = 'UPCOMING';
+    if (now >= startDate && now <= endDate) calculatedStatus = 'ONGOING';
+    else if (now > endDate) calculatedStatus = 'CLOSED';
+
     const finalJob = {
         ...jobForm,
         id: jobForm.id || `JOB-${Date.now()}`,
-        status: jobForm.status || 'UPCOMING',
-        deadLine: jobForm.schedule?.applicationPeriod.end || formatDate(new Date())
+        status: calculatedStatus,
+        deadLine: jobForm.schedule?.postingPeriod.end || jobForm.deadLine
     } as Job;
 
-    setAnnouncements(prev => {
-      const exists = prev.find(j => j.id === finalJob.id);
-      if (exists) return prev.map(j => j.id === finalJob.id ? finalJob : j);
-      return [...prev, finalJob];
-    });
+    console.log('Final Prepared Job for Context:', finalJob);
+
+    const exists = announcements.find(j => j.id === finalJob.id);
+    if (exists) {
+      updateJob(finalJob);
+    } else {
+      addJob(finalJob);
+    }
 
     setIsJobFormOpen(false);
     setJobFormStep(1);
     setEditingJob(null);
+    alert('공고가 성공적으로 저장되었습니다.');
   };
 
   const startEvaluation = (applicantId: string) => {
@@ -789,41 +645,42 @@ export default function Admin() {
                       </h2>
                       <p className="text-slate-400 text-xs font-bold mt-1 uppercase tracking-tighter">Announcement Generation System v2.0</p>
                    </div>
-                   <button 
-                    onClick={() => {
-                      setEditingJob(null);
-                      setJobForm({
-                        id: `JOB-${new Date().getFullYear()}-${String(announcements.length + 1).padStart(3, '0')}`,
-                        title: '',
-                        category: '연구직',
-                        type: '정규직',
-                        deadLine: formatDate(new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)),
-                        count: 0,
-                        status: 'UPCOMING',
-                        description: '',
-                        fields: [{ id: 'f_init', name: '', major: '', slots: 0, content: '' }],
-                        selectedStages: ['DOCUMENT', 'INTERVIEW_1'],
-                        qualifications: { common: '지방공무원법 제31조의 결격사유가 없는 자', additional: '' },
-                        requiredDocuments: ['응시원서', '자기소개서'],
-                        schedule: {
-                          postingPeriod: { start: formatDate(new Date()), end: formatDate(new Date(Date.now() + 14 * 24 * 60 * 60 * 1000)) },
-                          applicationPeriod: { start: formatDate(new Date()), end: formatDate(new Date(Date.now() + 14 * 24 * 60 * 60 * 1000)) },
-                          documentResults: '',
-                          interview1: '',
-                          finalResults: ''
-                        },
-                        salaryInfo: '당사 내부 규정에 따름',
-                        contractPeriod: '',
-                        notice: '공공기관 블라인드 채용 가이드를 준수합니다.',
-                        attachments: []
-                      });
-                      setIsJobFormOpen(true);
-                    }}
-                    className="flex items-center gap-2 px-6 py-3 bg-slate-900 text-white rounded-2xl text-sm font-black shadow-xl shadow-slate-900/10 hover:bg-slate-800 transition-all active:scale-95"
-                   >
-                      <PlusCircle className="w-4 h-4" />
-                      신규 공고 등록
-                   </button>
+                    <button 
+                     onClick={() => {
+                       setEditingJob(null);
+                       setJobForm({
+                         id: `JOB-${new Date().getFullYear()}-${String(announcements.length + 1).padStart(3, '0')}`,
+                         title: '',
+                         category: '연구직',
+                         type: '정규직',
+                         deadLine: formatDateISO(new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)),
+                         count: 0,
+                         status: 'UPCOMING',
+                         description: '',
+                         fields: [{ id: 'f_init', name: '', major: '', slots: 0, content: '' }],
+                         selectedStages: ['DOCUMENT', 'INTERVIEW_1'],
+                         qualifications: { common: '지방공무원법 제31조의 결격사유가 없는 자', additional: '' },
+                         requiredDocuments: ['응시원서', '자기소개서'],
+                         schedule: {
+                           postingPeriod: { start: formatDateISO(new Date()), end: formatDateISO(new Date(Date.now() + 14 * 24 * 60 * 60 * 1000)) },
+                           applicationPeriod: { start: formatDateISO(new Date()), end: formatDateISO(new Date(Date.now() + 14 * 24 * 60 * 60 * 1000)) },
+                           documentResults: '',
+                           interview1: '',
+                           finalResults: ''
+                         },
+                         salaryInfo: '당사 내부 규정에 따름',
+                         contractPeriod: '',
+                         notice: '공공기관 블라인드 채용 가이드를 준수합니다.',
+                         attachments: []
+                       });
+                       setJobFormStep(1); // Reset to first step
+                       setIsJobFormOpen(true);
+                     }}
+                     className="flex items-center gap-2 px-6 py-3 bg-slate-900 text-white rounded-2xl text-sm font-black shadow-xl shadow-slate-900/10 hover:bg-slate-800 transition-all active:scale-95 cursor-pointer z-10"
+                    >
+                       <PlusCircle className="w-4 h-4" />
+                       신규 공고 등록
+                    </button>
                 </div>
 
                 <div className="overflow-x-auto">
@@ -902,7 +759,7 @@ export default function Admin() {
                                 <button 
                                   onClick={() => {
                                     if (confirm('해당 공고를 삭제하시겠습니까? 데이터는 복구할 수 없습니다.')) {
-                                      setAnnouncements(prev => prev.filter(j => j.id !== job.id));
+                                      deleteJob(job.id);
                                     }
                                   }}
                                   className="p-2 text-slate-400 hover:text-red-500 transition-colors bg-white border border-slate-200 rounded-xl shadow-sm hover:border-red-500"
@@ -935,7 +792,7 @@ export default function Admin() {
                     }}
                     className="px-4 py-2 bg-slate-900 text-white border-0 rounded-xl text-xs font-bold font-mono outline-none focus:ring-4 focus:ring-primary/10 transition-all cursor-pointer"
                   >
-                    {INITIAL_JOBS.map(job => (
+                    {announcements.map(job => (
                       <option key={job.id} value={job.id}>{job.title}</option>
                     ))}
                   </select>
@@ -1217,7 +1074,7 @@ export default function Admin() {
                   className="px-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-600 outline-none focus:ring-2 focus:ring-primary/10 transition-all appearance-none pr-10 relative cursor-pointer"
                 >
                   <option value="ALL">전체 공고 보기</option>
-                  {jobs.map(job => <option key={job} value={job}>{job}</option>)}
+                  {jobsList.map(job => <option key={job} value={job}>{job}</option>)}
                 </select>
 
                 {/* Integrated PDF Button (Only visible if a specific job is selected) */}
@@ -2005,26 +1862,87 @@ export default function Admin() {
                               <div className="space-y-2">
                                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">공고 기간</label>
                                  <div className="flex items-center gap-2">
-                                    <input type="date" value={jobForm.schedule?.postingPeriod.start} className="flex-1 px-4 py-3 bg-white border border-slate-200 rounded-xl text-xs font-bold" />
+                                    <input 
+                                       type="date" 
+                                       value={jobForm.schedule?.postingPeriod.start || ''} 
+                                       onChange={(e) => setJobForm(prev => ({
+                                          ...prev,
+                                          schedule: {
+                                             ...(prev.schedule || { postingPeriod: { start: '', end: '' }, applicationPeriod: { start: '', end: '' }, documentResults: '', interview1: '', finalResults: '' }),
+                                             postingPeriod: { ...(prev.schedule?.postingPeriod || { start: '', end: '' }), start: e.target.value }
+                                          }
+                                       }))}
+                                       className="flex-1 px-4 py-3 bg-white border border-slate-200 rounded-xl text-xs font-bold" 
+                                    />
                                     <span className="text-slate-300">~</span>
-                                    <input type="date" value={jobForm.schedule?.postingPeriod.end} className="flex-1 px-4 py-3 bg-white border border-slate-200 rounded-xl text-xs font-bold" />
+                                    <input 
+                                       type="date" 
+                                       value={jobForm.schedule?.postingPeriod.end || ''} 
+                                       onChange={(e) => setJobForm(prev => ({
+                                          ...prev,
+                                          schedule: {
+                                             ...(prev.schedule || { postingPeriod: { start: '', end: '' }, applicationPeriod: { start: '', end: '' }, documentResults: '', interview1: '', finalResults: '' }),
+                                             postingPeriod: { ...(prev.schedule?.postingPeriod || { start: '', end: '' }), end: e.target.value }
+                                          }
+                                       }))}
+                                       className="flex-1 px-4 py-3 bg-white border border-slate-200 rounded-xl text-xs font-bold" 
+                                    />
                                  </div>
                               </div>
                               <div className="space-y-2">
                                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">접수 기간</label>
                                  <div className="flex items-center gap-2">
-                                    <input type="date" value={jobForm.schedule?.applicationPeriod.start} className="flex-1 px-4 py-3 bg-white border border-slate-200 rounded-xl text-xs font-bold" />
+                                    <input 
+                                       type="date" 
+                                       value={jobForm.schedule?.applicationPeriod.start || ''} 
+                                       onChange={(e) => setJobForm(prev => ({
+                                          ...prev,
+                                          schedule: {
+                                             ...(prev.schedule || { postingPeriod: { start: '', end: '' }, applicationPeriod: { start: '', end: '' }, documentResults: '', interview1: '', finalResults: '' }),
+                                             applicationPeriod: { ...(prev.schedule?.applicationPeriod || { start: '', end: '' }), start: e.target.value }
+                                          }
+                                       }))}
+                                       className="flex-1 px-4 py-3 bg-white border border-slate-200 rounded-xl text-xs font-bold" 
+                                    />
                                     <span className="text-slate-300">~</span>
-                                    <input type="date" value={jobForm.schedule?.applicationPeriod.end} className="flex-1 px-4 py-3 bg-white border border-slate-200 rounded-xl text-xs font-bold" />
+                                    <input 
+                                       type="date" 
+                                       value={jobForm.schedule?.applicationPeriod.end || ''} 
+                                       onChange={(e) => setJobForm(prev => ({
+                                          ...prev,
+                                          schedule: {
+                                             ...(prev.schedule || { postingPeriod: { start: '', end: '' }, applicationPeriod: { start: '', end: '' }, documentResults: '', interview1: '', finalResults: '' }),
+                                             applicationPeriod: { ...(prev.schedule?.applicationPeriod || { start: '', end: '' }), end: e.target.value }
+                                          }
+                                       }))}
+                                       className="flex-1 px-4 py-3 bg-white border border-slate-200 rounded-xl text-xs font-bold" 
+                                    />
                                  </div>
                               </div>
                               <div className="space-y-2">
                                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">1차 발표일</label>
-                                 <input type="date" value={jobForm.schedule?.documentResults} className="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl text-xs font-bold" />
+                                 <input 
+                                    type="date" 
+                                    value={jobForm.schedule?.documentResults || ''} 
+                                    onChange={(e) => setJobForm(prev => ({
+                                       ...prev,
+                                       schedule: {
+                                          ...(prev.schedule || { postingPeriod: { start: '', end: '' }, applicationPeriod: { start: '', end: '' }, documentResults: '', interview1: '', finalResults: '' }),
+                                          documentResults: e.target.value
+                                       }
+                                    }))}
+                                    className="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl text-xs font-bold" 
+                                 />
                               </div>
                               <div className="space-y-2">
                                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">보수(연봉) 정보</label>
-                                 <input type="text" value={jobForm.salaryInfo} className="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl text-sm font-bold" placeholder="예: 연 3,600만원 이상" />
+                                 <input 
+                                    type="text" 
+                                    value={jobForm.salaryInfo} 
+                                    onChange={(e) => setJobForm(prev => ({ ...prev, salaryInfo: e.target.value }))}
+                                    className="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl text-sm font-bold" 
+                                    placeholder="예: 연 3,600만원 이상" 
+                                 />
                               </div>
                            </div>
                         </div>
@@ -2473,11 +2391,11 @@ export default function Admin() {
                <div className="p-8 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
                   <div className="flex items-center gap-4">
                     <div className="w-12 h-12 rounded-2xl bg-primary text-white flex items-center justify-center font-black text-xl">
-                      {INITIAL_APPLICANTS.find(a => a.id === evaluatingApplicantId)?.name[0]}
+                      {applicantsList.find(a => a.id === evaluatingApplicantId)?.name[0]}
                     </div>
                     <div>
                       <h3 className="text-xl font-black text-slate-800 tracking-tight">
-                        {INITIAL_APPLICANTS.find(a => a.id === evaluatingApplicantId)?.name} 심사 진행
+                        {applicantsList.find(a => a.id === evaluatingApplicantId)?.name} 심사 진행
                       </h3>
                       <div className="flex items-center gap-2 mt-0.5">
                          <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
