@@ -9,22 +9,39 @@ import {
   AlertCircle 
 } from 'lucide-react';
 import { motion } from 'motion/react';
-import { formatDate } from '../lib/utils';
+import { formatDotDate, cn } from '../lib/utils';
+import { useJob } from '../context/JobContext';
+import { getComputedJobStatus } from '../lib/jobUtils';
 
 export default function JobDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const { jobs } = useJob();
 
-  // Mock data fetching based on id
-  const job = {
-    id,
-    title: id === '1' ? '2024년 하반기 연구직(수습) 정기 채용' : '정규직 행정직원 채용 공고',
-    category: '연구직',
-    deadLine: '2024-05-30',
-    count: 2,
-    status: 'ONGOING',
-    description: '스마트 도시 및 경제 개발 분야 정책 지원 연구'
-  };
+  const job = jobs.find(j => j.id === id);
+
+  if (!job) {
+    return (
+      <div className="max-w-4xl mx-auto py-20 text-center space-y-6">
+        <div className="w-20 h-20 bg-slate-100 rounded-full flex items-center justify-center mx-auto">
+          <AlertCircle className="w-10 h-10 text-slate-300" />
+        </div>
+        <div className="space-y-2">
+          <h2 className="text-2xl font-bold text-slate-800">공고를 찾을 수 없습니다</h2>
+          <p className="text-slate-500">삭제되었거나 잘못된 접근입니다.</p>
+        </div>
+        <Link 
+          to="/" 
+          className="inline-flex items-center gap-2 px-6 py-3 bg-primary text-white rounded-xl font-bold hover:bg-secondary transition-all"
+        >
+          <ArrowLeft className="w-4 h-4" />
+          목록으로 돌아가기
+        </Link>
+      </div>
+    );
+  }
+
+  const computedStatus = getComputedJobStatus(job);
 
   return (
     <div className="max-w-4xl mx-auto space-y-8">
@@ -43,8 +60,23 @@ export default function JobDetail() {
               {job.category}
             </span>
             <span className="bg-white border border-slate-200 text-slate-500 text-[10px] font-bold px-2 py-0.5 rounded tracking-widest uppercase">
-              정규직
+              {job.type}
             </span>
+            {computedStatus === 'CLOSED' && (
+              <span className="bg-red-500 text-white text-[10px] font-bold px-2 py-0.5 rounded tracking-widest uppercase">
+                마감됨
+              </span>
+            )}
+            {computedStatus === 'UPCOMING' && (
+              <span className="bg-blue-500 text-white text-[10px] font-bold px-2 py-0.5 rounded tracking-widest uppercase">
+                모집예정
+              </span>
+            )}
+            {computedStatus === 'ONGOING' && (
+              <span className="bg-green-500 text-white text-[10px] font-bold px-2 py-0.5 rounded tracking-widest uppercase">
+                모집중
+              </span>
+            )}
           </div>
           <h1 className="text-3xl font-bold text-slate-900 leading-tight">
             {job.title}
@@ -55,7 +87,9 @@ export default function JobDetail() {
               <Calendar className="w-4 h-4 text-primary" />
               <div className="text-sm">
                 <span className="block text-[10px] uppercase font-bold text-slate-400">접수기간</span>
-                <span className="font-semibold text-slate-700">~ {formatDate(job.deadLine)}</span>
+                <span className="font-semibold text-slate-700">
+                  {formatDotDate(job.schedule?.postingPeriod.start)} ~ {formatDotDate(job.schedule?.postingPeriod.end)}
+                </span>
               </div>
             </div>
             <div className="flex items-center gap-2 text-slate-500">
@@ -68,8 +102,8 @@ export default function JobDetail() {
             <div className="flex items-center gap-2 text-slate-500">
               <FileText className="w-4 h-4 text-primary" />
               <div className="text-sm">
-                <span className="block text-[10px] uppercase font-bold text-slate-400">모집분야</span>
-                <span className="font-semibold text-slate-700">{job.category}</span>
+                <span className="block text-[10px] uppercase font-bold text-slate-400">모집인원</span>
+                <span className="font-semibold text-slate-700">{job.count}명</span>
               </div>
             </div>
           </div>
@@ -78,26 +112,35 @@ export default function JobDetail() {
         <div className="p-8 space-y-12">
           {/* Section 1: 주요 직무 */}
           <section className="space-y-4">
-            <h2 className="text-xl font-bold border-l-4 border-primary pl-4">수행직무 및 자격요건</h2>
+            <h2 className="text-xl font-bold border-l-4 border-primary pl-4">주요 수행직무 및 자격요건</h2>
             <div className="bg-slate-50 rounded-2xl p-6 space-y-4">
               <div className="grid md:grid-cols-2 gap-8">
                 <div>
                   <h3 className="font-bold text-sm text-primary mb-3">주요 수행직무</h3>
-                  <ul className="space-y-2 text-sm text-slate-600 list-disc list-inside">
-                    <li>수원형 스마트도시 정책 연구 및 지원</li>
-                    <li>지역 경제 개발 모델 수립 및 분석</li>
-                    <li>정부 지원 사업 과제 기획 및 운영</li>
-                    <li>관련 데이터 수집 및 정량/정성 분석</li>
-                  </ul>
+                  <div className="space-y-4">
+                    {job.fields.map((field) => (
+                      <div key={field.id} className="p-3 bg-white rounded-xl border border-slate-100 shadow-sm">
+                        <p className="font-bold text-xs text-slate-800 mb-1">{field.name} ({field.slots}명)</p>
+                        <p className="text-[11px] text-slate-500 mb-1">전공: {field.major}</p>
+                        <p className="text-[11px] text-slate-600 leading-relaxed">{field.content}</p>
+                      </div>
+                    ))}
+                  </div>
                 </div>
                 <div>
                   <h3 className="font-bold text-sm text-primary mb-3">지원 자격</h3>
-                  <ul className="space-y-2 text-sm text-slate-600 list-disc list-inside">
-                    <li>관련 분야 석사 학위 이상 소지자</li>
-                    <li>국가공무원법 제33조에 의한 결격사유가 없는 자</li>
-                    <li>해외여행에 결격사유가 없는 자</li>
-                    <li>남자의 경우 병역필 또는 면제자</li>
-                  </ul>
+                  <div className="space-y-4">
+                    <div className="space-y-1">
+                      <p className="text-[11px] font-bold text-slate-400 uppercase">공통 자격</p>
+                      <p className="text-xs text-slate-700 font-medium leading-relaxed">{job.qualifications.common}</p>
+                    </div>
+                    {job.qualifications.additional && (
+                      <div className="space-y-1">
+                        <p className="text-[11px] font-bold text-slate-400 uppercase">분야별 추가 자격</p>
+                        <p className="text-xs text-slate-700 font-medium leading-relaxed">{job.qualifications.additional}</p>
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
               <div className="mt-6 pt-6 border-t border-slate-200">
@@ -114,26 +157,35 @@ export default function JobDetail() {
             <h2 className="text-xl font-bold border-l-4 border-primary pl-4">전형절차</h2>
             <div className="relative pt-4 overflow-x-auto pb-4">
               <div className="flex gap-4 min-w-[600px]">
-                {[
-                  { step: '01', title: '서류전형', sub: '적격성 검토' },
-                  { step: '02', title: '필기전형', sub: '인성/직무역량' },
-                  { step: '03', title: '1차 면접', sub: '실무진 면접' },
-                  { step: '04', title: '2차 면접', sub: '최종 면접' },
-                  { step: '05', title: '최종합격', sub: '신체검사/임용' },
-                ].map((item, idx) => (
-                  <div key={idx} className="flex-1 text-center space-y-2">
-                    <div className="relative">
-                      <div className="w-12 h-12 bg-white border-2 border-slate-200 rounded-full flex items-center justify-center font-bold text-slate-400 mx-auto z-10 relative bg-white">
-                        {item.step}
+                {job.selectedStages.map((stageType, idx) => {
+                  const titles: Record<string, string> = {
+                    'DOCUMENT': '서류심사',
+                    'INTERVIEW_1': '1차 면접',
+                    'INTERVIEW_2': '2차 면접',
+                    'INTERVIEW_PT': 'PT 면접'
+                  };
+                  return (
+                    <div key={idx} className="flex-1 text-center space-y-2">
+                      <div className="relative">
+                        <div className="w-12 h-12 bg-white border-2 border-slate-200 rounded-full flex items-center justify-center font-bold text-slate-400 mx-auto z-10 relative bg-white">
+                          O{idx + 1}
+                        </div>
+                        {idx < job.selectedStages.length - 1 && <div className="absolute top-1/2 left-[calc(50%+24px)] w-[calc(100%-48px)] h-0.5 bg-slate-100 -translate-y-1/2" />}
                       </div>
-                      {idx < 4 && <div className="absolute top-1/2 left-[calc(50%+24px)] w-[calc(100%-48px)] h-0.5 bg-slate-100 -translate-y-1/2" />}
+                      <div className="space-y-1 pt-1">
+                        <p className="font-bold text-sm">{titles[stageType]}</p>
+                      </div>
                     </div>
-                    <div className="space-y-1 pt-1">
-                      <p className="font-bold text-sm">{item.title}</p>
-                      <p className="text-[10px] text-slate-400 font-medium">{item.sub}</p>
-                    </div>
+                  );
+                })}
+                <div className="flex-1 text-center space-y-2">
+                  <div className="w-12 h-12 bg-primary/10 border-2 border-primary/20 rounded-full flex items-center justify-center font-bold text-primary mx-auto">
+                    FIN
                   </div>
-                ))}
+                  <div className="space-y-1 pt-1">
+                    <p className="font-bold text-sm">최종합격</p>
+                  </div>
+                </div>
               </div>
             </div>
           </section>
@@ -141,14 +193,20 @@ export default function JobDetail() {
           {/* Section 3: 안내사항 */}
           <section className="space-y-4">
             <h2 className="text-xl font-bold border-l-4 border-primary pl-4">유의사항</h2>
-            <div className="bg-amber-50 border border-amber-100 rounded-2xl p-6 space-y-3">
-              <div className="flex gap-3 text-amber-800">
-                <AlertCircle className="w-5 h-5 shrink-0" />
-                <div className="text-sm space-y-2">
-                  <p className="font-bold">블라인드 채용 가이드라인 준수</p>
-                  <p className="text-amber-700/80 leading-relaxed font-medium">
-                    본 채용은 블라인드 채용으로 진행됩니다. 입사지원서 및 자기소개서 작성 시 학력, 출신지, 가족관계 등 편견이 개입될 수 있는 정보를 기재할 경우 불이익을 받을 수 있습니다.
-                  </p>
+            <div className="bg-slate-50 border border-slate-100 rounded-2xl p-6 space-y-4">
+              <div className="space-y-2">
+                <p className="text-[11px] font-bold text-slate-400 uppercase">기타 안내사항</p>
+                <p className="text-sm text-slate-700 leading-relaxed whitespace-pre-wrap">{job.notice}</p>
+              </div>
+              <div className="bg-amber-50 border border-amber-100 rounded-2xl p-6 space-y-3">
+                <div className="flex gap-3 text-amber-800">
+                  <AlertCircle className="w-5 h-5 shrink-0" />
+                  <div className="text-sm space-y-2">
+                    <p className="font-bold">블라인드 채용 가이드라인 준수</p>
+                    <p className="text-amber-700/80 leading-relaxed font-medium">
+                      본 채용은 블라인드 채용으로 진행됩니다. 입사지원서 및 자기소개서 작성 시 학력, 출신지, 가족관계 등 편견이 개입될 수 있는 정보를 기재할 경우 불이익을 받을 수 있습니다.
+                    </p>
+                  </div>
                 </div>
               </div>
             </div>
@@ -156,15 +214,54 @@ export default function JobDetail() {
         </div>
 
         <div className="sticky bottom-0 bg-white/80 backdrop-blur-md border-t border-slate-100 p-8 flex justify-center shadow-2xl">
-          <motion.button 
-            whileHover={{ scale: 1.02 }}
-            whileTap={{ scale: 0.98 }}
-            onClick={() => navigate(`/apply/${id}`)}
-            className="max-w-md w-full bg-primary text-white py-4 rounded-2xl font-bold text-lg shadow-lg hover:bg-secondary transition-all flex items-center justify-center gap-3 group"
-          >
-            지원하기
-            <CheckCircle2 className="w-5 h-5 opacity-0 group-hover:opacity-100 transition-opacity" />
-          </motion.button>
+          {(() => {
+            const getButtonConfig = () => {
+              switch (computedStatus) {
+                case 'ONGOING':
+                  return {
+                    text: '지원하기',
+                    disabled: false,
+                    className: 'bg-primary hover:bg-secondary cursor-pointer',
+                    tooltip: ''
+                  };
+                case 'UPCOMING':
+                  return {
+                    text: '모집예정',
+                    disabled: true,
+                    className: 'bg-slate-300 opacity-80 cursor-not-allowed',
+                    tooltip: '공고 시작 후 지원 가능합니다.'
+                  };
+                case 'CLOSED':
+                  return {
+                    text: '접수마감',
+                    disabled: true,
+                    className: 'bg-slate-400 opacity-50 cursor-not-allowed',
+                    tooltip: '접수 기간이 종료되었습니다.'
+                  };
+                default:
+                  return { text: '지원불가', disabled: true, className: 'bg-slate-300', tooltip: '' };
+              }
+            };
+
+            const btnConfig = getButtonConfig();
+
+            return (
+              <motion.button 
+                whileHover={!btnConfig.disabled ? { scale: 1.02 } : {}}
+                whileTap={!btnConfig.disabled ? { scale: 0.98 } : {}}
+                disabled={btnConfig.disabled}
+                title={btnConfig.tooltip}
+                onClick={() => navigate(`/apply/${id}`)}
+                className={cn(
+                  "max-w-md w-full text-white py-4 rounded-2xl font-bold text-lg shadow-lg transition-all flex items-center justify-center gap-3 group",
+                  btnConfig.className
+                )}
+              >
+                {btnConfig.text}
+                {computedStatus === 'ONGOING' && <CheckCircle2 className="w-5 h-5 opacity-0 group-hover:opacity-100 transition-opacity" />}
+              </motion.button>
+            );
+          })()}
         </div>
       </div>
     </div>

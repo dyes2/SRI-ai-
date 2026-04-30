@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, Link } from 'react-router-dom';
 import { 
   Check, 
   ChevronRight, 
@@ -9,18 +9,13 @@ import {
   AlertCircle,
   FileUp,
   Trash2,
-  Plus
+  Plus,
+  ArrowLeft
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { cn } from '../lib/utils';
-
-// Steps: 
-// 1. 기본정보 
-// 2. 학력/경력/연구 
-// 3. 자기소개서 
-// 4. 직무수행계획서 
-// 5. 증빙자료 
-// 6. 최종제출
+import { useJob } from '../context/JobContext';
+import { getComputedJobStatus } from '../lib/jobUtils';
 
 const STEPS = [
   '기본정보', 
@@ -34,8 +29,12 @@ const STEPS = [
 export default function Apply() {
   const { jobId } = useParams();
   const navigate = useNavigate();
+  const { jobs } = useJob();
   const [currentStep, setCurrentStep] = useState(0);
   const [isSaving, setIsSaving] = useState(false);
+
+  const job = jobs.find(j => j.id === jobId);
+  const computedStatus = job ? getComputedJobStatus(job) : null;
 
   // Form State
   const [formData, setFormData] = useState(() => {
@@ -50,6 +49,32 @@ export default function Apply() {
       attachments: []
     };
   });
+
+  // Redirect or show error if job is not accepting applications
+  if (!job || computedStatus !== 'ONGOING') {
+    return (
+      <div className="max-w-4xl mx-auto py-20 text-center space-y-6">
+        <div className="w-20 h-20 bg-slate-100 rounded-full flex items-center justify-center mx-auto">
+          <AlertCircle className="w-10 h-10 text-slate-300" />
+        </div>
+        <div className="space-y-2">
+          <h2 className="text-2xl font-bold text-slate-800">지원이 불가능한 공고입니다</h2>
+          <p className="text-slate-500">
+            {!job ? '해당 공고를 찾을 수 없습니다.' : 
+             computedStatus === 'UPCOMING' ? '아직 모집 시작 전인 공고입니다.' : 
+             '접수 기간이 종료된 공고입니다.'}
+          </p>
+        </div>
+        <Link 
+          to="/" 
+          className="inline-flex items-center gap-2 px-6 py-3 bg-primary text-white rounded-xl font-bold hover:bg-secondary transition-all"
+        >
+          <ArrowLeft className="w-4 h-4" />
+          목록으로 돌아가기
+        </Link>
+      </div>
+    );
+  }
 
   // Auto-save effect
   useEffect(() => {

@@ -31,7 +31,7 @@ import {
   PlusCircle,
   Sparkles
 } from 'lucide-react';
-import { formatDate, cn } from '../lib/utils';
+import { formatDate, cn, formatDotDate, formatDateISO } from '../lib/utils';
 import { ApplicationStatus, Inquiry, EvaluationStage, ApplicantScore, Judge, StageType, Job } from '../types';
 import { ApplicationPDF } from '../components/admin/ApplicationPDF';
 import { SummaryPDF } from '../components/admin/SummaryPDF';
@@ -66,6 +66,7 @@ const MASTER_JUDGES: Judge[] = [
 ];
 
 import { useJob } from '../context/JobContext';
+import { getComputedJobStatus } from '../lib/jobUtils';
 
 export default function Admin() {
   const { 
@@ -259,10 +260,6 @@ export default function Admin() {
     );
   };
 
-  const formatDateISO = (date: Date) => {
-    return date.toISOString().split('T')[0];
-  };
-
   const handleStatusChange = (newStatus: ApplicationStatus) => {
     setApplicantsList(prev => prev.map(a => 
       selectedIds.includes(a.id) ? { ...a, status: newStatus } : a
@@ -448,15 +445,8 @@ export default function Admin() {
         return;
     }
     
-    // Determine status automatically based on dates
-    const now = new Date();
-    now.setHours(0,0,0,0);
-    const startDate = jobForm.schedule?.postingPeriod.start ? new Date(jobForm.schedule.postingPeriod.start) : new Date();
-    const endDate = jobForm.schedule?.postingPeriod.end ? new Date(jobForm.schedule.postingPeriod.end) : new Date();
-    
-    let calculatedStatus: 'ONGOING' | 'UPCOMING' | 'CLOSED' = 'UPCOMING';
-    if (now >= startDate && now <= endDate) calculatedStatus = 'ONGOING';
-    else if (now > endDate) calculatedStatus = 'CLOSED';
+    // Determine status automatically based on dates using helper
+    const calculatedStatus = getComputedJobStatus(jobForm as Job);
 
     const finalJob = {
         ...jobForm,
@@ -739,14 +729,19 @@ export default function Admin() {
                              </div>
                           </td>
                           <td className="px-8 py-6 text-center">
-                            <span className={cn(
-                              "px-3 py-1 rounded-full text-[10px] font-black tracking-tight border",
-                              job.status === 'ONGOING' ? 'bg-green-50 text-green-600 border-green-100 shadow-sm shadow-green-200/50' : 
-                              job.status === 'UPCOMING' ? 'bg-blue-50 text-blue-600 border-blue-100' :
-                              'bg-slate-50 text-slate-400 border-slate-100'
-                            )}>
-                              {job.status === 'ONGOING' ? '게시중' : job.status === 'UPCOMING' ? '예정' : '종료'}
-                            </span>
+                            {(() => {
+                              const computedStatus = getComputedJobStatus(job);
+                              return (
+                                <span className={cn(
+                                  "px-3 py-1 rounded-full text-[10px] font-black tracking-tight border",
+                                  computedStatus === 'ONGOING' ? 'bg-green-50 text-green-600 border-green-100 shadow-sm shadow-green-200/50' : 
+                                  computedStatus === 'UPCOMING' ? 'bg-blue-50 text-blue-600 border-blue-100' :
+                                  'bg-slate-50 text-slate-400 border-slate-100'
+                                )}>
+                                  {computedStatus === 'ONGOING' ? '게시중' : computedStatus === 'UPCOMING' ? '예정' : '종료'}
+                                </span>
+                              );
+                            })()}
                           </td>
                           <td className="px-8 py-6 text-right">
                              <div className="flex justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
@@ -1864,28 +1859,34 @@ export default function Admin() {
                                  <div className="flex items-center gap-2">
                                     <input 
                                        type="date" 
-                                       value={jobForm.schedule?.postingPeriod.start || ''} 
-                                       onChange={(e) => setJobForm(prev => ({
-                                          ...prev,
-                                          schedule: {
-                                             ...(prev.schedule || { postingPeriod: { start: '', end: '' }, applicationPeriod: { start: '', end: '' }, documentResults: '', interview1: '', finalResults: '' }),
-                                             postingPeriod: { ...(prev.schedule?.postingPeriod || { start: '', end: '' }), start: e.target.value }
-                                          }
-                                       }))}
-                                       className="flex-1 px-4 py-3 bg-white border border-slate-200 rounded-xl text-xs font-bold" 
+                                       value={jobForm.schedule?.postingPeriod?.start || ''} 
+                                       onChange={(e) => {
+                                          const val = e.target.value;
+                                          setJobForm(prev => ({
+                                             ...prev,
+                                             schedule: {
+                                                ...(prev.schedule || { postingPeriod: { start: '', end: '' }, applicationPeriod: { start: '', end: '' }, documentResults: '', interview1: '', finalResults: '' }),
+                                                postingPeriod: { ...(prev.schedule?.postingPeriod || { start: '', end: '' }), start: val }
+                                             }
+                                          }));
+                                       }}
+                                       className="flex-1 px-4 py-3 bg-white border border-slate-200 rounded-xl text-xs font-bold focus:ring-2 focus:ring-primary/20 outline-none" 
                                     />
                                     <span className="text-slate-300">~</span>
                                     <input 
                                        type="date" 
-                                       value={jobForm.schedule?.postingPeriod.end || ''} 
-                                       onChange={(e) => setJobForm(prev => ({
-                                          ...prev,
-                                          schedule: {
-                                             ...(prev.schedule || { postingPeriod: { start: '', end: '' }, applicationPeriod: { start: '', end: '' }, documentResults: '', interview1: '', finalResults: '' }),
-                                             postingPeriod: { ...(prev.schedule?.postingPeriod || { start: '', end: '' }), end: e.target.value }
-                                          }
-                                       }))}
-                                       className="flex-1 px-4 py-3 bg-white border border-slate-200 rounded-xl text-xs font-bold" 
+                                       value={jobForm.schedule?.postingPeriod?.end || ''} 
+                                       onChange={(e) => {
+                                          const val = e.target.value;
+                                          setJobForm(prev => ({
+                                             ...prev,
+                                             schedule: {
+                                                ...(prev.schedule || { postingPeriod: { start: '', end: '' }, applicationPeriod: { start: '', end: '' }, documentResults: '', interview1: '', finalResults: '' }),
+                                                postingPeriod: { ...(prev.schedule?.postingPeriod || { start: '', end: '' }), end: val }
+                                             }
+                                          }));
+                                       }}
+                                       className="flex-1 px-4 py-3 bg-white border border-slate-200 rounded-xl text-xs font-bold focus:ring-2 focus:ring-primary/20 outline-none" 
                                     />
                                  </div>
                               </div>
@@ -1894,28 +1895,34 @@ export default function Admin() {
                                  <div className="flex items-center gap-2">
                                     <input 
                                        type="date" 
-                                       value={jobForm.schedule?.applicationPeriod.start || ''} 
-                                       onChange={(e) => setJobForm(prev => ({
-                                          ...prev,
-                                          schedule: {
-                                             ...(prev.schedule || { postingPeriod: { start: '', end: '' }, applicationPeriod: { start: '', end: '' }, documentResults: '', interview1: '', finalResults: '' }),
-                                             applicationPeriod: { ...(prev.schedule?.applicationPeriod || { start: '', end: '' }), start: e.target.value }
-                                          }
-                                       }))}
-                                       className="flex-1 px-4 py-3 bg-white border border-slate-200 rounded-xl text-xs font-bold" 
+                                       value={jobForm.schedule?.applicationPeriod?.start || ''} 
+                                       onChange={(e) => {
+                                          const val = e.target.value;
+                                          setJobForm(prev => ({
+                                             ...prev,
+                                             schedule: {
+                                                ...(prev.schedule || { postingPeriod: { start: '', end: '' }, applicationPeriod: { start: '', end: '' }, documentResults: '', interview1: '', finalResults: '' }),
+                                                applicationPeriod: { ...(prev.schedule?.applicationPeriod || { start: '', end: '' }), start: val }
+                                             }
+                                          }));
+                                       }}
+                                       className="flex-1 px-4 py-3 bg-white border border-slate-200 rounded-xl text-xs font-bold focus:ring-2 focus:ring-primary/20 outline-none" 
                                     />
                                     <span className="text-slate-300">~</span>
                                     <input 
                                        type="date" 
-                                       value={jobForm.schedule?.applicationPeriod.end || ''} 
-                                       onChange={(e) => setJobForm(prev => ({
-                                          ...prev,
-                                          schedule: {
-                                             ...(prev.schedule || { postingPeriod: { start: '', end: '' }, applicationPeriod: { start: '', end: '' }, documentResults: '', interview1: '', finalResults: '' }),
-                                             applicationPeriod: { ...(prev.schedule?.applicationPeriod || { start: '', end: '' }), end: e.target.value }
-                                          }
-                                       }))}
-                                       className="flex-1 px-4 py-3 bg-white border border-slate-200 rounded-xl text-xs font-bold" 
+                                       value={jobForm.schedule?.applicationPeriod?.end || ''} 
+                                       onChange={(e) => {
+                                          const val = e.target.value;
+                                          setJobForm(prev => ({
+                                             ...prev,
+                                             schedule: {
+                                                ...(prev.schedule || { postingPeriod: { start: '', end: '' }, applicationPeriod: { start: '', end: '' }, documentResults: '', interview1: '', finalResults: '' }),
+                                                applicationPeriod: { ...(prev.schedule?.applicationPeriod || { start: '', end: '' }), end: val }
+                                             }
+                                          }));
+                                       }}
+                                       className="flex-1 px-4 py-3 bg-white border border-slate-200 rounded-xl text-xs font-bold focus:ring-2 focus:ring-primary/20 outline-none" 
                                     />
                                  </div>
                               </div>
@@ -1924,14 +1931,17 @@ export default function Admin() {
                                  <input 
                                     type="date" 
                                     value={jobForm.schedule?.documentResults || ''} 
-                                    onChange={(e) => setJobForm(prev => ({
-                                       ...prev,
-                                       schedule: {
-                                          ...(prev.schedule || { postingPeriod: { start: '', end: '' }, applicationPeriod: { start: '', end: '' }, documentResults: '', interview1: '', finalResults: '' }),
-                                          documentResults: e.target.value
-                                       }
-                                    }))}
-                                    className="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl text-xs font-bold" 
+                                    onChange={(e) => {
+                                       const val = e.target.value;
+                                       setJobForm(prev => ({
+                                          ...prev,
+                                          schedule: {
+                                             ...(prev.schedule || { postingPeriod: { start: '', end: '' }, applicationPeriod: { start: '', end: '' }, documentResults: '', interview1: '', finalResults: '' }),
+                                             documentResults: val
+                                          }
+                                       }));
+                                    }}
+                                    className="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl text-xs font-bold focus:ring-2 focus:ring-primary/20 outline-none" 
                                  />
                               </div>
                               <div className="space-y-2">
