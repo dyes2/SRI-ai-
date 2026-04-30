@@ -29,7 +29,14 @@ import {
   Trash2,
   MinusCircle,
   PlusCircle,
-  Sparkles
+  Sparkles,
+  BookOpen,
+  Cpu,
+  FileSearch,
+  Tag,
+  Languages,
+  CheckCircle2,
+  AlertCircle
 } from 'lucide-react';
 import { formatDate, cn, formatDotDate, formatDateISO } from '../lib/utils';
 import { ApplicationStatus, Inquiry, EvaluationStage, ApplicantScore, Judge, StageType, Job } from '../types';
@@ -135,6 +142,48 @@ export default function Admin() {
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
   const [isSignPopupOpen, setIsSignPopupOpen] = useState(false);
   const [isSignAgreed, setIsSignAgreed] = useState(false);
+
+  // Applicant Document Panel States
+  const [viewingApplicantPanel, setViewingApplicantPanel] = useState<{
+    applicant: any;
+    mode: 'DOCS' | 'AI';
+    tab: 'intro' | 'plan' | 'files' | 'analysis';
+  } | null>(null);
+  const [analysisResults, setAnalysisResults] = useState<Record<string, any>>({});
+  const [memos, setMemos] = useState<Record<string, string>>(() => {
+    const saved = localStorage.getItem('ATS_ADMIN_MEMOS');
+    return saved ? JSON.parse(saved) : {};
+  });
+
+  const analyzeApplicant = (applicantId: string, applicant: any) => {
+    if (analysisResults[applicantId]) return;
+
+    // Simulate AI computing
+    const res = {
+      summary: [
+        `${applicant.job || '지원'} 분야 실무 경험 및 이론적 배경 보유`,
+        `조직 내 커뮤니케이션 및 협업 강점 강조`,
+        `수원시 정책 발전에 대한 구체적인 기여 의지 확인`
+      ],
+      keywords: ['정책연구', '빅데이터', '협업', '실무중심', '혁신', '분석능력', '창의성'],
+      matchKeywords: applicant.job === '연구직' ? ['정책연구', '데이터분석', '보고서작성'] : ['행정관리', '예산운용', '회계'],
+      length: {
+        intro: (applicant.data?.intro?.motive?.length || 0) + (applicant.data?.intro?.capability?.length || 0) + (applicant.data?.intro?.experience?.length || 0) + (applicant.data?.intro?.suitability?.length || 0),
+        plan: (applicant.data?.plan?.direction?.length || 0) + (applicant.data?.plan?.utilization?.length || 0) + (applicant.data?.plan?.contribution?.length || 0)
+      },
+      readability: {
+        conciseness: 85,
+        specificity: 92,
+        experienceBased: 95
+      }
+    };
+    
+    setAnalysisResults(prev => ({ ...prev, [applicantId]: res }));
+  };
+
+  useEffect(() => {
+    localStorage.setItem('ATS_ADMIN_MEMOS', JSON.stringify(memos));
+  }, [memos]);
 
   // Judge Pool Implementation
   const [masterJudges, setMasterJudges] = useState<Judge[]>(MASTER_JUDGES);
@@ -1165,11 +1214,21 @@ export default function Admin() {
                       </td>
                       <td className="px-6 py-5">
                         <div className="flex items-center gap-3">
-                          <div className="w-9 h-9 rounded-full bg-slate-100 flex items-center justify-center font-bold text-xs text-slate-400 border border-slate-200 shadow-sm">
-                            {applicant.name[0]}
+                          <div className="relative">
+                            <div className="w-9 h-9 rounded-full bg-slate-100 flex items-center justify-center font-bold text-xs text-slate-400 border border-slate-200 shadow-sm overflow-hidden">
+                              {applicant.name[0]}
+                            </div>
+                            {applicant.isNew && (
+                              <span className="absolute -top-1 -right-1 w-3 h-3 bg-red-500 border-2 border-white rounded-full animate-pulse" />
+                            )}
                           </div>
                           <div className="flex flex-col">
-                            <span className="text-sm font-bold text-slate-700">{applicant.name}</span>
+                            <div className="flex items-center gap-1.5">
+                              <span className="text-sm font-bold text-slate-700">{applicant.name}</span>
+                              {applicant.isNew && (
+                                <span className="text-[8px] font-black bg-red-50 text-red-500 px-1 rounded border border-red-100 uppercase tracking-tighter">New</span>
+                              )}
+                            </div>
                             <span className="text-[10px] text-slate-400 font-medium">{applicant.email}</span>
                           </div>
                         </div>
@@ -1197,6 +1256,27 @@ export default function Admin() {
                       <td className="px-6 py-5 text-right">
                         <div className="flex justify-end gap-2 opacity-0 group-hover:opacity-100 transition-all duration-200">
                           <button 
+                            disabled={!applicant.data}
+                            onClick={() => setViewingApplicantPanel({ applicant, mode: 'DOCS', tab: 'intro' })}
+                            className="flex items-center gap-1.5 px-3 py-1.5 bg-white border border-slate-200 rounded-lg text-[10px] font-bold text-slate-600 hover:text-primary hover:border-primary transition-all disabled:opacity-50 disabled:cursor-not-allowed group/btn shadow-sm"
+                            title="서류보기"
+                          >
+                            <FileSearch className="w-3.5 h-3.5" />
+                            서류보기
+                          </button>
+                          <button 
+                            disabled={!applicant.data}
+                            onClick={() => {
+                              setViewingApplicantPanel({ applicant, mode: 'AI', tab: 'analysis' });
+                              analyzeApplicant(applicant.id, applicant);
+                            }}
+                            className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-900 border border-slate-800 rounded-lg text-[10px] font-bold text-white hover:bg-slate-800 transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-sm"
+                            title="AI 요약분석"
+                          >
+                            <Sparkles className="w-3.5 h-3.5 text-amber-400" />
+                            요약분석
+                          </button>
+                          <button 
                             onClick={() => exportToPDF(applicant)}
                             className="p-1.5 text-slate-400 hover:text-primary transition-colors bg-white border border-slate-200 rounded-lg shadow-sm flex items-center gap-1"
                             title="PDF 다운로드"
@@ -1206,9 +1286,6 @@ export default function Admin() {
                             ) : (
                               <FileDown className="w-3.5 h-3.5" />
                             )}
-                          </button>
-                          <button className="p-1.5 text-slate-400 hover:text-primary transition-colors bg-white border border-slate-200 rounded-lg shadow-sm">
-                            <MoreHorizontal className="w-3.5 h-3.5" />
                           </button>
                         </div>
                       </td>
@@ -2565,6 +2642,267 @@ export default function Admin() {
                   </button>
                </div>
              </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* Applicant Document & Analysis Panel */}
+      <AnimatePresence>
+        {viewingApplicantPanel && (
+          <div className="fixed inset-0 z-[500] flex justify-end">
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setViewingApplicantPanel(null)}
+              className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm"
+            />
+            <motion.div 
+              initial={{ x: '100%' }}
+              animate={{ x: 0 }}
+              exit={{ x: '100%' }}
+              transition={{ type: 'spring', damping: 25, stiffness: 200 }}
+              className="relative w-full max-w-2xl bg-white h-full shadow-2xl flex flex-col"
+            >
+              <div className="p-6 border-b border-slate-100 flex items-center justify-between bg-white sticky top-0 z-10">
+                <div className="flex items-center gap-4">
+                  <div className="w-12 h-12 bg-primary/5 rounded-2xl flex items-center justify-center border border-primary/10">
+                    <User className="w-6 h-6 text-primary" />
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-2">
+                       <h2 className="text-xl font-black text-slate-800">{viewingApplicantPanel.applicant.name}</h2>
+                       <span className="text-[10px] font-bold text-slate-400 font-mono tracking-tighter">No.{viewingApplicantPanel.applicant.id}</span>
+                    </div>
+                    <p className="text-xs font-bold text-slate-400">{viewingApplicantPanel.applicant.job}</p>
+                  </div>
+                </div>
+                <button 
+                  onClick={() => setViewingApplicantPanel(null)}
+                  className="p-2 hover:bg-slate-50 rounded-xl text-slate-400 border border-transparent hover:border-slate-200 transition-all"
+                >
+                  <ChevronDown className="w-6 h-6 -rotate-90" />
+                </button>
+              </div>
+
+              {/* Panel Tabs */}
+              <div className="px-6 py-4 flex gap-2 border-b border-slate-100 bg-slate-50/50">
+                {[
+                  { id: 'intro', label: '자기소개서', icon: FileText },
+                  { id: 'plan', label: '직무수행계획', icon: BookOpen },
+                  { id: 'files', label: '첨부파일', icon: FileDown },
+                  { id: 'analysis', label: 'AI 요약분석', icon: Sparkles, color: 'text-amber-500' }
+                ].map(tab => (
+                  <button 
+                    key={tab.id}
+                    onClick={() => {
+                        setViewingApplicantPanel(prev => prev ? { ...prev, tab: tab.id as any } : null);
+                        if (tab.id === 'analysis') analyzeApplicant(viewingApplicantPanel.applicant.id, viewingApplicantPanel.applicant);
+                    }}
+                    className={cn(
+                      "flex items-center gap-2 px-4 py-2.5 rounded-xl text-[11px] font-black tracking-tight transition-all",
+                      viewingApplicantPanel.tab === tab.id 
+                        ? "bg-white text-slate-900 shadow-sm border border-slate-200" 
+                        : "text-slate-400 hover:text-slate-600 hover:bg-white/50"
+                    )}
+                  >
+                    <tab.icon className={cn("w-3.5 h-3.5", tab.id === 'analysis' && "text-amber-400")} />
+                    {tab.label}
+                  </button>
+                ))}
+              </div>
+
+              <div className="flex-1 overflow-y-auto p-8 space-y-10 custom-scrollbar">
+                {/* Intro Tab */}
+                {viewingApplicantPanel.tab === 'intro' && (
+                  <div className="space-y-12">
+                    {[
+                      { title: '지원동기 및 포부', content: viewingApplicantPanel.applicant.data.intro.motive },
+                      { title: '핵심 역량 및 강점', content: viewingApplicantPanel.applicant.data.intro.capability },
+                      { title: '주요 경험 및 성과', content: viewingApplicantPanel.applicant.data.intro.experience },
+                      { title: '직무 적합성', content: viewingApplicantPanel.applicant.data.intro.suitability }
+                    ].map((section, idx) => (
+                      <div key={idx} className="space-y-4">
+                        <div className="flex items-center gap-3">
+                           <div className="w-1.5 h-6 bg-primary rounded-full" />
+                           <h4 className="text-lg font-black text-slate-800">{section.title}</h4>
+                        </div>
+                        <div className="p-6 bg-slate-50 rounded-3xl text-sm font-medium text-slate-700 leading-relaxed overflow-hidden">
+                           <p className="whitespace-pre-wrap">{section.content}</p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {/* Plan Tab */}
+                {viewingApplicantPanel.tab === 'plan' && (
+                  <div className="space-y-12">
+                     <div className="flex items-center gap-3">
+                        <div className="w-1.5 h-6 bg-primary rounded-full" />
+                        <h4 className="text-lg font-black text-slate-800">직무수행계획서</h4>
+                     </div>
+                     <div className="space-y-6">
+                        {[
+                          { title: '수행 방향', content: viewingApplicantPanel.applicant.data.plan.direction },
+                          { title: '역량 활용 방안', content: viewingApplicantPanel.applicant.data.plan.utilization },
+                          { title: '기대 효과 및 공헌', content: viewingApplicantPanel.applicant.data.plan.contribution }
+                        ].map((part, idx) => (
+                          <div key={idx} className="space-y-2">
+                             <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">{part.title}</p>
+                             <div className="p-6 bg-slate-50 border border-slate-100 rounded-3xl text-sm font-medium text-slate-700 leading-relaxed">
+                                {part.content}
+                             </div>
+                          </div>
+                        ))}
+                     </div>
+                  </div>
+                )}
+
+                {/* Files Tab */}
+                {viewingApplicantPanel.tab === 'files' && (
+                   <div className="space-y-6">
+                      <div className="flex items-center gap-3">
+                        <div className="w-1.5 h-6 bg-primary rounded-full" />
+                        <h4 className="text-lg font-black text-slate-800">첨부 증빙 서류</h4>
+                      </div>
+                      <div className="grid grid-cols-1 gap-4">
+                         {viewingApplicantPanel.applicant.data.attachments.map((file: string, idx: number) => (
+                           <div key={idx} className="flex items-center justify-between p-4 bg-white border border-slate-200 rounded-2xl hover:border-primary transition-all group cursor-pointer shadow-sm">
+                             <div className="flex items-center gap-3">
+                                <div className="w-10 h-10 bg-slate-50 rounded-xl flex items-center justify-center group-hover:bg-primary/5">
+                                   <FileText className="w-5 h-5 text-slate-400 group-hover:text-primary" />
+                                </div>
+                                <div>
+                                   <p className="text-sm font-bold text-slate-700">{file}</p>
+                                   <p className="text-[10px] text-slate-400 font-medium">Original File • 1.2MB</p>
+                                </div>
+                             </div>
+                             <button className="p-2 text-slate-300 hover:text-primary hover:bg-slate-50 rounded-lg transition-all">
+                                <FileDown className="w-5 h-5" />
+                             </button>
+                           </div>
+                         ))}
+                         {viewingApplicantPanel.applicant.data.attachments.length === 0 && (
+                           <div className="py-20 text-center space-y-2">
+                              <AlertCircle className="w-10 h-10 text-slate-200 mx-auto" />
+                              <p className="text-sm font-bold text-slate-400">제출된 첨부 서류가 없습니다.</p>
+                           </div>
+                         )}
+                      </div>
+                   </div>
+                )}
+
+                {/* Analysis Tab */}
+                {viewingApplicantPanel.tab === 'analysis' && analysisResults[viewingApplicantPanel.applicant.id] && (
+                  <div className="space-y-10 animate-in fade-in slide-in-from-bottom-2 duration-500">
+                    {/* Header Summary */}
+                    <div className="bg-slate-900 rounded-[2.5rem] p-8 text-white relative overflow-hidden shadow-2xl">
+                      <div className="absolute top-0 right-0 w-32 h-32 bg-primary/20 blur-3xl -mr-16 -mt-16" />
+                      <div className="flex items-center gap-3 mb-6">
+                        <div className="w-8 h-8 bg-amber-400 text-slate-900 rounded-lg flex items-center justify-center">
+                          <Cpu className="w-5 h-5" />
+                        </div>
+                        <h4 className="text-sm font-black uppercase tracking-widest text-amber-400">AI 핵심 요약 분석</h4>
+                      </div>
+                      <div className="space-y-4">
+                        {analysisResults[viewingApplicantPanel.applicant.id].summary.map((text: string, i: number) => (
+                          <div key={i} className="flex gap-4 group">
+                             <div className="w-1 h-auto bg-primary/30 group-hover:bg-primary rounded-full transition-all" />
+                             <p className="text-sm font-medium leading-relaxed opacity-90">{text}</p>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-6">
+                       {/* Keywords */}
+                       <div className="space-y-4">
+                          <div className="flex items-center gap-2">
+                             <Tag className="w-4 h-4 text-primary" />
+                             <h4 className="text-sm font-black text-slate-800 tracking-tight">핵심 키워드</h4>
+                          </div>
+                          <div className="flex flex-wrap gap-2">
+                             {analysisResults[viewingApplicantPanel.applicant.id].keywords.map((tag: string) => (
+                               <span key={tag} className="px-3 py-1.5 bg-slate-50 text-slate-600 rounded-xl text-[10px] font-black border border-slate-200/50 hover:bg-slate-100 transition-all cursor-default">#{tag}</span>
+                             ))}
+                          </div>
+                       </div>
+                       {/* Match */}
+                       <div className="space-y-4">
+                          <div className="flex items-center gap-2">
+                             <Languages className="w-4 h-4 text-indigo-500" />
+                             <h4 className="text-sm font-black text-slate-800 tracking-tight">직무 적합 매칭</h4>
+                          </div>
+                          <div className="flex flex-wrap gap-2">
+                             {analysisResults[viewingApplicantPanel.applicant.id].matchKeywords.map((tag: string) => (
+                               <span key={tag} className="px-3 py-1.5 bg-indigo-50 text-indigo-600 rounded-xl text-[10px] font-black border border-indigo-100 flex items-center gap-1.5">
+                                 <CheckCircle2 className="w-3 h-3" />
+                                 {tag}
+                               </span>
+                             ))}
+                          </div>
+                       </div>
+                    </div>
+
+                    {/* Stats */}
+                    <div className="grid grid-cols-3 gap-4">
+                       {[
+                         { label: '작성 분량', val: `${analysisResults[viewingApplicantPanel.applicant.id].length.intro + analysisResults[viewingApplicantPanel.applicant.id].length.plan}자`, desc: `자기소개서 ${analysisResults[viewingApplicantPanel.applicant.id].length.intro}자` },
+                         { label: '가독성 수준', val: '매우 우수', desc: '논리적 구심점 우수' },
+                         { label: '경험 배치', val: '95점', desc: '성과 중심 기술' }
+                       ].map((s, idx) => (
+                         <div key={idx} className="p-5 bg-white border border-slate-100 rounded-3xl shadow-sm text-center space-y-1">
+                            <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">{s.label}</p>
+                            <h5 className="text-lg font-black text-slate-800">{s.val}</h5>
+                            <p className="text-[10px] font-bold text-slate-400 truncate">{s.desc}</p>
+                         </div>
+                       ))}
+                    </div>
+
+                    {/* Evaluations */}
+                    <div className="space-y-6 pt-4 border-t border-slate-100">
+                       <h4 className="text-sm font-black text-slate-800 tracking-tight">AI 가독성 평가 상세</h4>
+                       <div className="space-y-6">
+                          {[
+                            { label: '문장 간결성', score: analysisResults[viewingApplicantPanel.applicant.id].readability.conciseness },
+                            { label: '내용 구체성', score: analysisResults[viewingApplicantPanel.applicant.id].readability.specificity },
+                            { label: '경험 중심성', score: analysisResults[viewingApplicantPanel.applicant.id].readability.experienceBased }
+                          ].map((item, idx) => (
+                            <div key={idx} className="space-y-2">
+                               <div className="flex justify-between items-center text-[11px] font-black uppercase tracking-tight">
+                                  <span className="text-slate-600">{item.label}</span>
+                                  <span className="text-primary">{item.score}%</span>
+                               </div>
+                               <div className="h-2 bg-slate-100 rounded-full overflow-hidden">
+                                  <motion.div 
+                                    initial={{ width: 0 }}
+                                    animate={{ width: `${item.score}%` }}
+                                    transition={{ duration: 1, delay: 0.2 + idx * 0.1 }}
+                                    className="h-full bg-primary"
+                                  />
+                               </div>
+                            </div>
+                          ))}
+                       </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Comprehensive Memo */}
+              <div className="p-6 bg-slate-50 border-t border-slate-100">
+                 <div className="space-y-3">
+                    <h4 className="text-xs font-black text-slate-800 tracking-tight uppercase">관리자 메모</h4>
+                    <textarea 
+                       value={memos[viewingApplicantPanel.applicant.id] || ''}
+                       onChange={(e) => setMemos(prev => ({ ...prev, [viewingApplicantPanel.applicant.id]: e.target.value }))}
+                       placeholder="심사 시 참고할 내용을 자유롭게 작성하세요..."
+                       className="w-full p-4 bg-white border border-slate-200 rounded-2xl text-xs font-medium outline-none focus:ring-4 focus:ring-primary/10 transition-all min-h-[80px] resize-none"
+                    />
+                 </div>
+              </div>
+            </motion.div>
           </div>
         )}
       </AnimatePresence>
