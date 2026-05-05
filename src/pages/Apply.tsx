@@ -109,7 +109,7 @@ export default function Apply() {
       name: formData.personal.name,
       email: formData.personal.email,
       jobId: jobId,
-      job: job.category,
+      job: job.title,
       status: '접수완료',
       date: new Date().toISOString().split('T')[0],
       isNew: true,

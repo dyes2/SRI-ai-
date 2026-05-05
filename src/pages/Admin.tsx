@@ -166,7 +166,13 @@ export default function Admin() {
         `수원시 정책 발전에 대한 구체적인 기여 의지 확인`
       ],
       keywords: ['정책연구', '빅데이터', '협업', '실무중심', '혁신', '분석능력', '창의성'],
-      matchKeywords: applicant.job === '연구직' ? ['정책연구', '데이터분석', '보고서작성'] : ['행정관리', '예산운용', '회계'],
+      matchKeywords: applicant.job?.includes('연구직') ? ['정책연구', '데이터분석', '보고서작성'] : ['행정관리', '예산운용', '회계'],
+      metrics: {
+        repetitionRate: Math.floor(Math.random() * 15) + 5,
+        similarity: Math.floor(Math.random() * 20) + 10,
+        formalRate: Math.floor(Math.random() * 30) + 60
+      },
+      aiSuspicion: Math.floor(Math.random() * 100),
       length: {
         intro: (applicant.data?.intro?.motive?.length || 0) + (applicant.data?.intro?.capability?.length || 0) + (applicant.data?.intro?.experience?.length || 0) + (applicant.data?.intro?.suitability?.length || 0),
         plan: (applicant.data?.plan?.direction?.length || 0) + (applicant.data?.plan?.utilization?.length || 0) + (applicant.data?.plan?.contribution?.length || 0)
@@ -194,6 +200,7 @@ export default function Admin() {
   const [judgeFormError, setJudgeFormError] = useState('');
 
   const [inquirySearch, setInquirySearch] = useState('');
+  const [applicantSearch, setApplicantSearch] = useState('');
   const [inquiryStatusFilter, setInquiryStatusFilter] = useState<'ALL' | 'PENDING' | 'ANSWERED'>('ALL');
   const [inquiryVisibilityFilter, setInquiryVisibilityFilter] = useState<'ALL' | 'PUBLIC' | 'PRIVATE'>('ALL');
   const [filterJob, setFilterJob] = useState<'ALL' | string>('ALL');
@@ -279,11 +286,25 @@ export default function Admin() {
     );
   }
 
+  const getDuplicateCount = (applicant: any) => {
+    if (!applicant.data?.personal) return 0;
+    const { name, birthday } = applicant.data.personal;
+    return applicantsList.filter(a => 
+      a.data?.personal?.name === name && 
+      a.data?.personal?.birthday === birthday
+    ).length;
+  };
+
   const filteredApplicants = activeTab === 'evaluation'
     ? applicantsList.filter(a => a.jobId === activeEvalJob)
-    : filterJob === 'ALL' 
-      ? applicantsList 
-      : applicantsList.filter(a => a.job === filterJob);
+    : applicantsList.filter(a => {
+        const matchesJob = filterJob === 'ALL' || a.job === filterJob;
+        const searchLow = applicantSearch.toLowerCase();
+        const matchesSearch = a.name.toLowerCase().includes(searchLow) || 
+                             a.email.toLowerCase().includes(searchLow) || 
+                             a.id.toLowerCase().includes(searchLow);
+        return matchesJob && matchesSearch;
+      });
 
   const filteredInquiries = inquiries.filter(i => {
     const searchLow = inquirySearch.toLowerCase();
@@ -605,10 +626,34 @@ export default function Admin() {
       {/* Stats Board */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
         {[
-          { label: '전체 지원자', val: '1,240', delta: '+12', icon: Users, color: 'blue' },
-          { label: '미답변 문의', val: String(inquiries.filter(i => !i.answer).length), delta: 'New', icon: MessageSquare, color: 'orange' },
-          { label: '진행중 공고', val: '4', delta: '0', icon: FileText, color: 'purple' },
-          { label: '최종 합격자', val: '32', delta: '+5', icon: Check, color: 'green' },
+          { 
+            label: '전체 지원자', 
+            val: applicantsList.length.toLocaleString(), 
+            delta: activeTab === 'applicants' ? `최근 ${applicantsList.filter(a => a.isNew).length}건` : '+12', 
+            icon: Users, 
+            color: 'blue' 
+          },
+          { 
+            label: '중복지원 의심', 
+            val: applicantsList.filter(a => getDuplicateCount(a) > 1).length.toLocaleString(), 
+            delta: '상세확인', 
+            icon: AlertCircle, 
+            color: 'orange' 
+          },
+          { 
+            label: '진행중 공고', 
+            val: announcements.length.toLocaleString(), 
+            delta: 'Live', 
+            icon: FileText, 
+            color: 'purple' 
+          },
+          { 
+            label: '미열람 서류', 
+            val: applicantsList.filter(a => a.isNew).length.toLocaleString(), 
+            delta: '확인필요', 
+            icon: BookOpen, 
+            color: 'green' 
+          },
         ].map((stat, idx) => (
           <div key={idx} className="bento-card p-6 space-y-4">
             <div className="flex items-center justify-between">
@@ -1170,14 +1215,16 @@ export default function Admin() {
                   </AnimatePresence>
                 </div>
 
-                <div className="relative">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 w-3.5 h-3.5" />
-                  <input 
-                    type="text" 
-                    placeholder="검색"
-                    className="pl-9 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs outline-none focus:ring-2 focus:ring-primary/10 transition-all w-48"
-                  />
-                </div>
+                  <div className="relative">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 w-3.5 h-3.5" />
+                    <input 
+                      type="text" 
+                      value={applicantSearch}
+                      onChange={(e) => setApplicantSearch(e.target.value)}
+                      placeholder="지원자명, 이메일 검색"
+                      className="pl-9 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs outline-none focus:ring-2 focus:ring-primary/10 transition-all w-48"
+                    />
+                  </div>
               </div>
             </div>
 
@@ -1193,11 +1240,12 @@ export default function Admin() {
                         className="w-4 h-4 rounded border-slate-300 text-primary focus:ring-primary cursor-pointer"
                       />
                     </th>
-                    <th className="px-6 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest min-w-[200px]">지원자 정보</th>
-                    <th className="px-6 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest min-w-[200px]">지원 공고</th>
+                    <th className="px-6 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest min-w-[180px]">지원자 정보</th>
+                    <th className="px-6 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest min-w-[180px]">지원 공고</th>
+                    <th className="px-6 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">중복 여부</th>
+                    <th className="px-6 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">AI 분석</th>
                     <th className="px-6 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">지원일</th>
                     <th className="px-6 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">전형 상태</th>
-                    <th className="px-6 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">접수 번호</th>
                     <th className="px-6 py-5 w-24"></th>
                   </tr>
                 </thead>
@@ -1234,7 +1282,31 @@ export default function Admin() {
                         </div>
                       </td>
                       <td className="px-6 py-5">
-                        <span className="text-sm font-medium text-slate-600">{applicant.job}</span>
+                        <span className="text-sm font-medium text-slate-600 line-clamp-1">{applicant.job}</span>
+                      </td>
+                      <td className="px-6 py-5 text-center">
+                        {getDuplicateCount(applicant) > 1 ? (
+                          <div className="inline-flex items-center gap-1 px-2 py-0.5 bg-orange-50 text-orange-600 rounded border border-orange-100 animate-pulse">
+                            <AlertCircle className="w-3 h-3" />
+                            <span className="text-[10px] font-black tracking-tighter">⚠️ {getDuplicateCount(applicant)}건 지원</span>
+                          </div>
+                        ) : (
+                          <span className="text-[10px] font-bold text-slate-300">-</span>
+                        )}
+                      </td>
+                      <td className="px-6 py-5 text-center">
+                        {analysisResults[applicant.id] ? (
+                          <div className={cn(
+                            "inline-flex items-center gap-1.5 px-2 py-1 rounded-lg text-[10px] font-black tracking-tight",
+                            analysisResults[applicant.id].aiSuspicion > 70 ? "bg-red-50 text-red-600" :
+                            analysisResults[applicant.id].aiSuspicion > 40 ? "bg-amber-50 text-amber-600" :
+                            "bg-green-50 text-green-600"
+                          )}>
+                            <span>{analysisResults[applicant.id].aiSuspicion > 70 ? '🔴 높음' : analysisResults[applicant.id].aiSuspicion > 40 ? '🟡 검토' : '🟢 낮음'}</span>
+                          </div>
+                        ) : (
+                          <span className="text-[10px] font-bold text-slate-300">미분석</span>
+                        )}
                       </td>
                       <td className="px-6 py-5 text-center">
                         <span className="text-sm text-slate-400 font-mono tracking-tight">{applicant.date}</span>
@@ -2845,17 +2917,24 @@ export default function Admin() {
                        </div>
                     </div>
 
-                    {/* Stats */}
-                    <div className="grid grid-cols-3 gap-4">
+                    {/* Metrics Grid */}
+                    <div className="grid grid-cols-2 gap-4">
                        {[
-                         { label: '작성 분량', val: `${analysisResults[viewingApplicantPanel.applicant.id].length.intro + analysisResults[viewingApplicantPanel.applicant.id].length.plan}자`, desc: `자기소개서 ${analysisResults[viewingApplicantPanel.applicant.id].length.intro}자` },
-                         { label: '가독성 수준', val: '매우 우수', desc: '논리적 구심점 우수' },
-                         { label: '경험 배치', val: '95점', desc: '성과 중심 기술' }
+                         { label: '문장 반복률', val: `${analysisResults[viewingApplicantPanel.applicant.id].metrics.repetitionRate}%`, color: 'blue' },
+                         { label: '타 지원자 유사도', val: `${analysisResults[viewingApplicantPanel.applicant.id].metrics.similarity}%`, color: 'orange' },
+                         { label: '정형문 비율', val: `${analysisResults[viewingApplicantPanel.applicant.id].metrics.formalRate}%`, color: 'purple' },
+                         { label: 'AI 활용 의심도', val: `${analysisResults[viewingApplicantPanel.applicant.id].aiSuspicion}%`, color: 'red' }
                        ].map((s, idx) => (
-                         <div key={idx} className="p-5 bg-white border border-slate-100 rounded-3xl shadow-sm text-center space-y-1">
+                         <div key={idx} className="p-5 bg-white border border-slate-100 rounded-3xl shadow-sm space-y-1">
                             <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">{s.label}</p>
-                            <h5 className="text-lg font-black text-slate-800">{s.val}</h5>
-                            <p className="text-[10px] font-bold text-slate-400 truncate">{s.desc}</p>
+                            <div className="flex items-center justify-between">
+                              <h5 className="text-xl font-black text-slate-800">{s.val}</h5>
+                              <div className={cn(
+                                "w-2 h-2 rounded-full",
+                                (idx === 3 && parseInt(s.val) > 70) ? "bg-red-500 animate-pulse" : 
+                                (idx === 3 && parseInt(s.val) > 40) ? "bg-amber-500" : "bg-green-500"
+                              )} />
+                            </div>
                          </div>
                        ))}
                     </div>

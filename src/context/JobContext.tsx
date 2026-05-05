@@ -56,7 +56,7 @@ const INITIAL_APPLICANTS = [
     name: '홍길동', 
     email: 'hong@test.com', 
     jobId: 'JOB-2026-001', 
-    job: '연구직', 
+    job: '2026년 상반기 연구직(정규직) 공개채용', 
     status: '접수완료', 
     date: '2026-04-20',
     isNew: true,
@@ -66,7 +66,7 @@ const INITIAL_APPLICANTS = [
         motive: '수원시의 발전을 위해 그동안 쌓아온 정책 연구 능력을 발휘하고 싶습니다. 특히 도시 계획 분야에서의 실무 경험을 바탕으로 현실적인 대안을 제시하겠습니다.',
         capability: '빅데이터 분석을 통한 도시 트렌드 예측 및 정책 제언 능력이 뛰어납니다. 다수의 지자체 프로젝트를 수행하며 협업 능력을 검증받았습니다.',
         experience: 'A연구소에서 3년간 도시 재생 프로젝트 선임 연구원으로 근무하며, 노후 도심 활성화 방안을 수립했습니다.',
-        suitability: '수원시정연구원이 추구하는 시민 중심의 연구 기조와 저의 연구 철학이 일치한다고 확신합니다.'
+        suitability: '수원시정연구원이 추구하는 시민 중심의 연구 기조와 저의 연구 철학이 일치하다고 확신합니다.'
       },
       plan: {
         direction: '시민 체감형 스마트시티 정책 연구에 집중하겠습니다.',
@@ -81,7 +81,7 @@ const INITIAL_APPLICANTS = [
     name: '임꺽정', 
     email: 'lim@test.com', 
     jobId: 'JOB-2026-001', 
-    job: '연구직', 
+    job: '2026년 상반기 연구직(정규직) 공개채용', 
     status: '심사중', 
     date: '2026-04-21',
     isNew: false,
@@ -142,6 +142,23 @@ export function JobProvider({ children }: { children: ReactNode }) {
   });
 
   useEffect(() => {
+    const handleStorageChange = (e: StorageEvent) => {
+      try {
+        if (e.key === 'ATS_JOBS') setJobs(JSON.parse(e.newValue || '[]'));
+        if (e.key === 'ATS_APPLICANTS') setApplicants(JSON.parse(e.newValue || '[]'));
+        if (e.key === 'ATS_INQUIRIES') setInquiries(JSON.parse(e.newValue || '[]'));
+        if (e.key === 'ATS_SCORES') setApplicantScores(JSON.parse(e.newValue || '[]'));
+        if (e.key === 'ATS_STAGES') setEvaluationStages(JSON.parse(e.newValue || '{}'));
+      } catch (err) {
+        console.error('Failed to parse storage update', err);
+      }
+    };
+
+    window.addEventListener('storage', handleStorageChange);
+    return () => window.removeEventListener('storage', handleStorageChange);
+  }, []);
+
+  useEffect(() => {
     localStorage.setItem('ATS_JOBS', JSON.stringify(jobs));
   }, [jobs]);
 
@@ -150,6 +167,7 @@ export function JobProvider({ children }: { children: ReactNode }) {
   }, [inquiries]);
 
   useEffect(() => {
+    console.log('Context State Updated - Applicants:', applicants);
     localStorage.setItem('ATS_APPLICANTS', JSON.stringify(applicants));
   }, [applicants]);
 
