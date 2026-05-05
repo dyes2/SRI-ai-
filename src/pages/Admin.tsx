@@ -472,7 +472,7 @@ export default function Admin() {
 
   const toggleJudgeSelection = (judge: Judge) => {
     setEvaluationStages(prev => {
-        const stageList = prev[activeEvalJob];
+        const stageList = prev[activeEvalJob] || [];
         const updatedList = stageList.map(s => {
             if (s.type === activeEvalStageType) {
                 const isSelected = s.judges.some(j => j.id === judge.id);
@@ -880,7 +880,7 @@ export default function Admin() {
                             const val = parseInt(e.target.value);
                             setEvaluationStages(prev => ({
                               ...prev,
-                              [activeEvalJob]: prev[activeEvalJob].map(s => s.type === activeEvalStageType ? { ...s, multiplier: val } : s)
+                              [activeEvalJob]: (prev[activeEvalJob] || []).map(s => s.type === activeEvalStageType ? { ...s, multiplier: val } : s)
                             }));
                           }}
                           className="bg-slate-50 border border-slate-200 rounded-lg text-xs font-bold p-1 outline-none"
@@ -909,12 +909,12 @@ export default function Admin() {
                             위원 풀 관리
                          </button>
                          <span className="text-[10px] font-bold bg-slate-100 px-2 py-1 rounded-lg text-slate-500 border border-slate-200/50">
-                          {evaluationStages[activeEvalJob]?.find(s => s.type === activeEvalStageType)?.judges.length}명
+                          {evaluationStages[activeEvalJob]?.find(s => s.type === activeEvalStageType)?.judges?.length || 0}명
                         </span>
                     </div>
                   </div>
                   <div className="space-y-2">
-                    {evaluationStages[activeEvalJob]?.find(s => s.type === activeEvalStageType)?.judges.map(judge => (
+                    {evaluationStages[activeEvalJob]?.find(s => s.type === activeEvalStageType)?.judges?.map(judge => (
                       <div key={judge.id} className="flex items-center justify-between p-3 bg-slate-50 rounded-xl group border border-transparent hover:border-slate-200 transition-all">
                         <div className="flex items-center gap-3">
                           <div className="w-9 h-9 rounded-full bg-white flex items-center justify-center font-bold text-xs text-slate-400 border border-slate-200 shadow-sm">
@@ -929,7 +929,7 @@ export default function Admin() {
                           onClick={() => {
                             setEvaluationStages(prev => ({
                               ...prev,
-                              [activeEvalJob]: prev[activeEvalJob].map(s => s.type === activeEvalStageType ? { ...s, judges: s.judges.filter(j => j.id !== judge.id) } : s)
+                              [activeEvalJob]: (prev[activeEvalJob] || []).map(s => s.type === activeEvalStageType ? { ...s, judges: s.judges.filter(j => j.id !== judge.id) } : s)
                             }));
                           }}
                           className="p-1.5 text-slate-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-all"
@@ -2286,7 +2286,7 @@ export default function Admin() {
                 <div className="p-8 border-b border-slate-100 flex items-center justify-between">
                    <div>
                       <h3 className="text-xl font-black text-slate-800 tracking-tight">심사위원 인력풀 관리</h3>
-                      <p className="text-xs text-slate-400 font-medium mt-1">심사위원을 등록하고 현재 전형({evaluationStages[activeEvalJob]?.find(s => s.type === activeEvalStageType)?.title})에 배정합니다.</p>
+                      <p className="text-xs text-slate-400 font-medium mt-1">심사위원을 등록하고 현재 전형({evaluationStages[activeEvalJob]?.find(s => s.type === activeEvalStageType)?.title || '전형 선택됨'})에 배정합니다.</p>
                    </div>
                    <button 
                     onClick={() => setIsJudgePoolOpen(false)}
@@ -2321,7 +2321,7 @@ export default function Admin() {
 
                    <div className="grid gap-3">
                       {masterJudges.map(judge => {
-                         const isSelectedInCurrentStage = evaluationStages[activeEvalJob]?.find(s => s.type === activeEvalStageType)?.judges.some(j => j.id === judge.id);
+                         const isSelectedInCurrentStage = evaluationStages[activeEvalJob]?.find(s => s.type === activeEvalStageType)?.judges?.some(j => j.id === judge.id);
                          return (
                             <div 
                                 key={judge.id} 
@@ -2494,7 +2494,7 @@ export default function Admin() {
                            onChange={(e) => setEvalForm(prev => ({ ...prev, judgeId: e.target.value }))}
                            className="text-[10px] font-bold text-primary bg-primary/5 px-2 py-0.5 rounded border border-primary/10 outline-none"
                          >
-                            {evaluationStages[activeEvalJob]?.find(s => s.type === activeEvalStageType)?.judges.map(j => (
+                            {evaluationStages[activeEvalJob]?.find(s => s.type === activeEvalStageType)?.judges?.map(j => (
                                 <option key={j.id} value={j.id}>{j.name} 위원</option>
                             ))}
                          </select>
@@ -2559,7 +2559,7 @@ export default function Admin() {
                     </div>
                     
                     <div className="grid gap-4">
-                       {evaluationStages[activeEvalJob]?.find(s => s.type === activeEvalStageType)?.criteria.map(c => (
+                       {evaluationStages[activeEvalJob]?.find(s => s.type === activeEvalStageType)?.criteria?.map(c => (
                          <div key={c.id} className="flex items-center justify-between p-4 bg-slate-50/50 border border-slate-100 rounded-2xl group focus-within:border-primary/30 transition-all">
                             <div className="flex-1">
                                <p className="text-sm font-bold text-slate-700">{c.label}</p>

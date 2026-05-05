@@ -164,6 +164,25 @@ export function JobProvider({ children }: { children: ReactNode }) {
   const addJob = (job: Job) => {
     console.log('Adding New Job:', job);
     setJobs(prev => [job, ...prev]);
+    
+    // Initialize default evaluation stages
+    const defaultStages: EvaluationStage[] = job.selectedStages.map(st => ({
+      type: st,
+      title: st === 'DOCUMENT' ? '서류심사' : 
+             st === 'INTERVIEW_1' ? '1차 면접' : 
+             st === 'INTERVIEW_2' ? '2차 면접' : '실무/PT 면접',
+      multiplier: 3,
+      openings: job.count,
+      minPassScore: 60,
+      judges: [],
+      criteria: [
+        { id: `c-${st}-1`, label: '전문성', maxScore: 40 },
+        { id: `c-${st}-2`, label: '인성/태도', maxScore: 30 },
+        { id: `c-${st}-3`, label: '발전가능성', maxScore: 30 }
+      ]
+    }));
+    
+    setEvaluationStages(prev => ({ ...prev, [job.id]: defaultStages }));
   };
 
   const updateJob = (job: Job) => {

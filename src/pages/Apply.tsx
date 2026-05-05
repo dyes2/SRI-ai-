@@ -29,7 +29,7 @@ const STEPS = [
 export default function Apply() {
   const { jobId } = useParams();
   const navigate = useNavigate();
-  const { jobs } = useJob();
+  const { jobs, setApplicants } = useJob();
   const [currentStep, setCurrentStep] = useState(0);
   const [isSaving, setIsSaving] = useState(false);
 
@@ -99,10 +99,37 @@ export default function Apply() {
   };
 
   const handleSubmit = () => {
+    if (!job) return;
     setIsSaving(true);
-    // Simulate submission
+    
+    // Create new applicant object
+    const newId = `${new Date().getFullYear()}-${jobId?.split('-').pop()}-${Math.floor(100 + Math.random() * 899)}`;
+    const newApplicant = {
+      id: newId,
+      name: formData.personal.name,
+      email: formData.personal.email,
+      jobId: jobId,
+      job: job.category,
+      status: '접수완료',
+      date: new Date().toISOString().split('T')[0],
+      isNew: true,
+      data: {
+        personal: { ...formData.personal },
+        intro: { ...formData.intro },
+        plan: {
+          direction: formData.plan.text.length > 50 ? formData.plan.text.substring(0, 50) + '...' : formData.plan.text,
+          utilization: '본인 경험 활용',
+          contribution: '기관 발전 기여'
+        },
+        attachments: formData.attachments.length > 0 ? formData.attachments : ['지원서_증빙자료.pdf']
+      }
+    };
+
+    // Simulate network delay
     setTimeout(() => {
-      alert('지원이 완료되었습니다!');
+      setApplicants(prev => [newApplicant, ...prev]);
+      setIsSaving(false);
+      alert('지원이 성공적으로 완료되었습니다!');
       localStorage.removeItem(`apply-draft-${jobId}`);
       navigate('/mypage');
     }, 2000);
